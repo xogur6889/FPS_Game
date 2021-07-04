@@ -1,0 +1,164 @@
+fileFormatVersion: 2
+guid: 6b9d151bd67df2b42a2308fd563861a3
+ModelImporter:
+  serializedVersion: 22
+  fileIDToRecycleName:
+    100000: HC_balcony-L_1
+    100002: HC_balcony-R_1
+    100004: HC_ceiling-L_1
+    100006: HC_ceiling-R_1
+    100008: HC_floor-L_1
+    100010: HC_floor-R_1
+    100012: HC_foundation_1
+    100014: HC_roof_edge-L_1
+    100016: HC_roof_edge-R_1
+    100018: HC_roof_mid_1
+    100020: HC_stairs_bottom_1
+    100022: HC_stairs_mid_1
+    100024: HC_stairs_top_1
+    100026: HC_wall-L_1
+    100028: HC_wall-R_1
+    100030: //RootNode
+    400000: HC_balcony-L_1
+    400002: HC_balcony-R_1
+    400004: HC_ceiling-L_1
+    400006: HC_ceiling-R_1
+    400008: HC_floor-L_1
+    400010: HC_floor-R_1
+    400012: HC_foundation_1
+    400014: HC_roof_edge-L_1
+    400016: HC_roof_edge-R_1
+    400018: HC_roof_mid_1
+    400020: HC_stairs_bottom_1
+    400022: HC_stairs_mid_1
+    400024: HC_stairs_top_1
+    400026: HC_wall-L_1
+    400028: HC_wall-R_1
+    400030: //RootNode
+    2100000: Texture01_AL
+    2300000: HC_balcony-L_1
+    2300002: HC_balcony-R_1
+    2300004: HC_ceiling-L_1
+    2300006: HC_ceiling-R_1
+    2300008: HC_floor-L_1
+    2300010: HC_floor-R_1
+    2300012: HC_foundation_1
+    2300014: HC_roof_edge-L_1
+    2300016: HC_roof_edge-R_1
+    2300018: HC_roof_mid_1
+    2300020: HC_stairs_bottom_1
+    2300022: HC_stairs_mid_1
+    2300024: HC_stairs_top_1
+    2300026: HC_wall-L_1
+    2300028: HC_wall-R_1
+    3300000: HC_balcony-L_1
+    3300002: HC_balcony-R_1
+    3300004: HC_ceiling-L_1
+    3300006: HC_ceiling-R_1
+    3300008: HC_floor-L_1
+    3300010: HC_floor-R_1
+    3300012: HC_foundation_1
+    3300014: HC_roof_edge-L_1
+    3300016: HC_roof_edge-R_1
+    3300018: HC_roof_mid_1
+    3300020: HC_stairs_bottom_1
+    3300022: HC_stairs_mid_1
+    3300024: HC_stairs_top_1
+    3300026: HC_wall-L_1
+    3300028: HC_wall-R_1
+    4300000: HC_foundation_1
+    4300002: HC_roof_mid_1
+    4300004: HC_roof_edge-L_1
+    4300006: HC_roof_edge-R_1
+    4300008: HC_stairs_bottom_1
+    4300010: HC_stairs_mid_1
+    4300012: HC_stairs_top_1
+    4300014: HC_ceiling-L_1
+    4300016: HC_floor-L_1
+    4300018: HC_wall-L_1
+    4300020: HC_balcony-L_1
+    4300022: HC_ceiling-R_1
+    4300024: HC_floor-R_1
+    4300026: HC_wall-R_1
+    4300028: HC_balcony-R_1
+  externalObjects: {}
+  materials:
+    importMaterials: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 0
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 1
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    swapUVChannels: 0
+    generateSecondaryUV: 1
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 1
+    preserveHierarchy: 0
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 16
+    useFileScale: 1
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+  importAnimation: 0
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    rootMotionBoneRotation: {x: 0, y: 0, z: 0, w: 1}
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 0
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
