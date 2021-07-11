@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Unity.FPS.Game;
 using UnityEngine;
 using UnityEngine.AI;
@@ -6,7 +7,8 @@ using UnityEngine.Events;
 
 namespace Unity.FPS.AI
 {
-    [RequireComponent(typeof(Health), typeof(Actor), typeof(NavMeshAgent))]
+    //[RequireComponent(typeof(Health), typeof(Actor), typeof(NavMeshAgent))]
+    [RequireComponent(typeof(Health), typeof(Actor))] // 최태혁 수정. NavMesh 미사용
     public class EnemyController : MonoBehaviour
     {
         [System.Serializable]
@@ -406,7 +408,8 @@ namespace Unity.FPS.AI
 
         public bool TryAtack(Vector3 enemyPosition)
         {
-            if (m_GameFlowManager.GameIsEnding)
+            //if (m_GameFlowManager.GameIsEnding)
+            if (m_GameFlowManager.GameIsEnding || NavMeshAgent == null) // 최태혁 추가 Nav Mesh 없으면 공격 안함.
                 return false;
 
             OrientWeaponsTowards(enemyPosition);
@@ -438,7 +441,7 @@ namespace Unity.FPS.AI
             else if (DropRate == 1)
                 return true;
             else
-                return (Random.value <= DropRate);
+                return (UnityEngine.Random.value <= DropRate);
         }
 
         void FindAndInitializeAllWeapons()
