@@ -1,5 +1,10 @@
 using UnityEngine;
 
+///
+/// Unity Character Controller example
+/// https://docs.unity3d.com/ScriptReference/CharacterController.Move.html
+/// 
+
 namespace OSS.Character
 {
     [RequireComponent(
@@ -66,6 +71,7 @@ namespace OSS.Character
             // 캐릭터 이동량에 따른 애니메이션 전환 (Idle, Run)
             animator.SetFloat(AnimationFloatValueMovement, moveVector.magnitude);   //TODO (sungsikoh) : 별도의 클래스에서 애니메이션 제어 
 
+            // 점프
             Jump();
         }
 
