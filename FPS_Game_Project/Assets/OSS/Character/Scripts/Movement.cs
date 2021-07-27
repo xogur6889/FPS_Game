@@ -1,3 +1,5 @@
+using Photon.Pun;
+using Unity.FPS.Gameplay;
 using UnityEngine;
 
 ///
@@ -32,10 +34,14 @@ namespace OSS.Character
         [Tooltip("캐릭터 애니메이터")] private Animator animator;
         [Tooltip("캐릭터 애니메이터 움직임(Idle, Run Forward) 상태 변수")] private static readonly int AnimationFloatValueMovement = Animator.StringToHash("movement");
 
+        private PhotonView photonView;
+
         private void Start()
         {
             SetCursor();
             GetComponents();
+            
+            if (photonView.IsMine == false) playerCamera.gameObject.SetActive(false);
         }
         
         /// <summary>
@@ -52,6 +58,7 @@ namespace OSS.Character
         /// </summary>
         private void GetComponents()
         {
+            photonView = GetComponent<PhotonView>();
             characterController = GetComponent<CharacterController>();
             animator = GetComponent<Animator>();
             playerCamera = GetComponentInChildren<Camera>();
@@ -62,6 +69,7 @@ namespace OSS.Character
         /// </summary>
         private void Update()
         {
+            if (photonView.IsMine == false || PhotonNetwork.IsConnected == false) return;
             // 회전
             Rotation(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));
 
