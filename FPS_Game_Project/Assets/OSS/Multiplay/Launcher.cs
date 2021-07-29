@@ -13,6 +13,8 @@ namespace OSS.Multiplay
 
         private void Awake()
         {
+            if (PhotonNetwork.IsConnected == true) return;
+            
             // PhotonNetwork.LoadLevel() 함수를 마스터 클라이언트에서 호출 시 같은 방에 있는 모든 클라이언트들의 씬도 자동으로 변경하도록 함.
             PhotonNetwork.AutomaticallySyncScene = true;
 

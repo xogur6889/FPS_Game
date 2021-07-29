@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/OSS/Launcher.unity
+    path: Assets/OSS/Launcher/Scenes/Launcher.unity
     guid: c26b7478c5451034f86ba3f7a320726a
   - enabled: 1
     path: Assets/Merge_Folder/Character_Shooting.unity

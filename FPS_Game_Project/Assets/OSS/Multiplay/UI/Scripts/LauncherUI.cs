@@ -9,17 +9,17 @@ namespace OSS.Multiplay.UI
     public class LauncherUI : MonoBehaviour
     {
         [SerializeField] private Launcher launcher;
-        
+
         [Tooltip("MainMenu root canvas")] private Transform mainMenuRootTransform;
         [Tooltip("MainMenu 방 생성 버튼")] private Button mainMenuCreateRoomButton;
         [Tooltip("MainMenu 방 참가 버튼")] private Button mainMenuJoinRoomButton;
         [Tooltip("MainMenu 종료 버튼")] private Button mainMenuQuitButton;
-        
+
         [Tooltip("방 생성 UI 부모 transform")] private Transform createRoomRootTransform;
         [Tooltip("방 생성 메뉴, 방 이름 입력 창")] private InputField createRoomInputField;
         [Tooltip("방 생성 메뉴, 생성 버튼")] private Button createRoomButton;
-        
-        
+
+
         [Tooltip("방 참가 UI 부모 canvas")] private Transform joinRoomRootTransform;
         [Tooltip("방 목록 Scroll view")] private GameObject joinRoomListScrollViewContent;
 
@@ -28,7 +28,7 @@ namespace OSS.Multiplay.UI
         [SerializeField] private GameObject roomButtonItemPrefab;
         private readonly List<Button> roomButtonList = new List<Button>();
 
-        private enum MenuState
+        public enum MenuState
         {
             MainMenu,
             CreateRoom,
@@ -42,19 +42,19 @@ namespace OSS.Multiplay.UI
         {
             mainMenuRootTransform = transform.Find("MainMenu");
             mainMenuCreateRoomButton = mainMenuRootTransform.Find("Create Room").GetComponent<Button>();
-            mainMenuCreateRoomButton.onClick.AddListener(delegate { SetMenuEnabled(MenuState.CreateRoom); } );
+            // mainMenuCreateRoomButton.onClick.AddListener(delegate { SetMenuEnabled(MenuState.CreateRoom); });
             mainMenuJoinRoomButton = mainMenuRootTransform.Find("Join Room").GetComponent<Button>();
-            mainMenuJoinRoomButton.onClick.AddListener(delegate { SetMenuEnabled(MenuState.JoinRoom); } );
+            // mainMenuJoinRoomButton.onClick.AddListener(delegate { SetMenuEnabled(MenuState.JoinRoom); });
             mainMenuQuitButton = mainMenuRootTransform.Find("Quit").GetComponent<Button>();
-            mainMenuQuitButton.onClick.AddListener(delegate { SetMenuEnabled(MenuState.Quit); } );
-            
+            // mainMenuQuitButton.onClick.AddListener(delegate { SetMenuEnabled(MenuState.Quit); });
+
 
             createRoomRootTransform = transform.Find("Create Room");
             createRoomInputField = createRoomRootTransform.Find("InputField").GetComponent<InputField>();
             createRoomButton = createRoomRootTransform.Find("Create Room").GetComponent<Button>();
             createRoomButton.onClick.AddListener(CreateRoomButtonClick);
-            
-            
+
+
             joinRoomRootTransform = transform.Find("Join Room");
             joinRoomListScrollViewContent = joinRoomRootTransform.Find("Room List/Viewport/Content").gameObject;
 
@@ -67,27 +67,28 @@ namespace OSS.Multiplay.UI
             SetMenuEnabled(MenuState.MainMenu);
         }
 
-        private void SetMenuEnabled(in MenuState menuState)
+        public void SetMenuEnabled(in MenuState menuState)
         {
+            Debug.Log("Change Menu to " + menuState.ToString());
             this.menuState = menuState;
             switch (menuState)
             {
                 case MenuState.MainMenu:
                     createRoomRootTransform.gameObject.SetActive(false);
                     joinRoomRootTransform.gameObject.SetActive(false);
-            
+
                     mainMenuRootTransform.gameObject.SetActive(true);
                     break;
                 case MenuState.CreateRoom:
                     joinRoomRootTransform.gameObject.SetActive(false);
                     mainMenuRootTransform.gameObject.SetActive(false);
-                    
+
                     createRoomRootTransform.gameObject.SetActive(true);
                     break;
                 case MenuState.JoinRoom:
                     createRoomRootTransform.gameObject.SetActive(false);
                     mainMenuRootTransform.gameObject.SetActive(false);
-            
+
                     joinRoomRootTransform.gameObject.SetActive(true);
                     break;
                 case MenuState.Quit:
@@ -101,7 +102,7 @@ namespace OSS.Multiplay.UI
         {
             string roomName = createRoomInputField.text;
             if (string.IsNullOrEmpty(roomName) == true) return;
-            
+
             launcher.CreateRoom(roomName);
         }
 
@@ -116,24 +117,23 @@ namespace OSS.Multiplay.UI
                     roomButtonList.RemoveAt(index);
                 }
 
-                if (index == -1 && roomInfo.IsOpen == true && (roomInfo.PlayerCount < roomInfo.MaxPlayers))
-                {
-                    GameObject roomButtonGameObject = GameObject.Instantiate(roomButtonItemPrefab);
-                    RectTransform roomButtonRectTransform = (RectTransform)roomButtonGameObject.transform;
-                    roomButtonRectTransform.SetParent(joinRoomListScrollViewContent.transform);
-                    int lastIndex = roomButtonList.Count;
-                    Vector3 roomButtonPosition = roomButtonRectTransform.position;
-                    roomButtonPosition.y = lastIndex * roomButtonRectTransform.rect.height * -1;
-                    roomButtonRectTransform.position = roomButtonPosition;
-                    RectTransform roomButtonParentRectTransform = (RectTransform)roomButtonRectTransform.parent.transform;
-                    LayoutRebuilder.ForceRebuildLayoutImmediate(roomButtonParentRectTransform);
+                if (index != -1 || roomInfo.IsOpen != true || (roomInfo.PlayerCount >= roomInfo.MaxPlayers)) continue;
 
-                    Button roomButton = roomButtonGameObject.GetComponent<Button>();
-                    roomButton.name = roomInfo.Name;
-                    roomButton.GetComponentInChildren<Text>().text = roomInfo.Name;
-                    roomButton.onClick.AddListener(delegate { launcher.JoinRoom(roomInfo.Name); });
-                    roomButtonList.Add(roomButton);
-                }
+                GameObject roomButtonGameObject = GameObject.Instantiate(roomButtonItemPrefab);
+                RectTransform roomButtonRectTransform = (RectTransform) roomButtonGameObject.transform;
+                roomButtonRectTransform.SetParent(joinRoomListScrollViewContent.transform);
+                int lastIndex = roomButtonList.Count;
+                Vector3 roomButtonPosition = roomButtonRectTransform.position;
+                roomButtonPosition.y = lastIndex * roomButtonRectTransform.rect.height * -1;
+                roomButtonRectTransform.position = roomButtonPosition;
+                RectTransform roomButtonParentRectTransform = (RectTransform) roomButtonRectTransform.parent.transform;
+                LayoutRebuilder.ForceRebuildLayoutImmediate(roomButtonParentRectTransform);
+
+                Button roomButton = roomButtonGameObject.GetComponent<Button>();
+                roomButton.name = roomInfo.Name;
+                roomButton.GetComponentInChildren<Text>().text = roomInfo.Name;
+                roomButton.onClick.AddListener(delegate { launcher.JoinRoom(roomInfo.Name); });
+                roomButtonList.Add(roomButton);
             }
         }
     }
