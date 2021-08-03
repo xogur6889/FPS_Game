@@ -14,7 +14,7 @@ namespace OSS.Multiplay.UI
         [SerializeField] private Launcher launcher;
 
         [Tooltip("MainMenu root canvas")] private Transform mainMenuRootTransform;
-        [Tooltip("MainMenu 방 생성 버튼")] private Button mainMenuCreateRoomButton;
+        [Tooltip("MainMenu 방 생성 버튼")] private Button mainMenuStartButton;
         [Tooltip("MainMenu 방 참가 버튼")] private Button mainMenuJoinRoomButton;
         [Tooltip("MainMenu 종료 버튼")] private Button mainMenuQuitButton;
 
@@ -23,8 +23,8 @@ namespace OSS.Multiplay.UI
         [Tooltip("방 생성 메뉴, 생성 버튼")] private Button createRoomButton;
 
 
-        [Tooltip("방 참가 UI 부모 canvas")] private Transform joinRoomRootTransform;
-        [Tooltip("방 목록 Scroll view")] private GameObject joinRoomListScrollViewContent;
+        [Tooltip("방 참가 UI 부모 canvas")] private Transform roomListRootTransform;
+        [Tooltip("방 목록 Scroll view")] private GameObject roomListScrollViewContent;
 
         [Tooltip("뒤로가기 버든")] private Button backButton;
 
@@ -34,7 +34,7 @@ namespace OSS.Multiplay.UI
         public enum MenuState
         {
             MainMenu,
-            Launch_CreateRoom,
+            Launch_Start,
             Launch_JoinRoom,
             Quit
         };
@@ -44,83 +44,44 @@ namespace OSS.Multiplay.UI
         private void Awake()
         {
             SetupButtonEvents();
-
-            createRoomRootTransform = transform.Find("Create Room");
-            createRoomInputField = createRoomRootTransform.Find("InputField").GetComponent<InputField>();
-            createRoomButton = createRoomRootTransform.Find("Create Room").GetComponent<Button>();
-            createRoomButton.onClick.AddListener(CreateRoomButtonClick);
-
-            joinRoomRootTransform = transform.Find("Join Room");
-            joinRoomListScrollViewContent = joinRoomRootTransform.Find("Room List/Viewport/Content").gameObject;
-
-            backButton = transform.Find("Back").GetComponent<Button>();
-            backButton.onClick.AddListener(delegate { SetMenuEnabled(MenuState.MainMenu); });
+            
+            roomListRootTransform = transform.Find("RoomList");
+            roomListScrollViewContent = roomListRootTransform.Find("Room List/Viewport/Content").gameObject;
         }
-
+        
         private void SetupButtonEvents()
         {
             mainMenuRootTransform = transform.Find("MainMenu");
-
             
-            
-            mainMenuCreateRoomButton = mainMenuRootTransform.Find("Create Room").GetComponent<Button>();
+            mainMenuStartButton = mainMenuRootTransform.Find("Start").GetComponent<Button>();
 
-            EventTrigger eventTriggerMainMenuCreateRoom =
-                GetOrAddComponent<EventTrigger>(mainMenuCreateRoomButton.gameObject);
-            EventTrigger.Entry entryPointerEnterMainMenuCreateRoom =
+            EventTrigger eventTriggerMainMenuStart =
+                GetOrAddComponent<EventTrigger>(mainMenuStartButton.gameObject);
+            EventTrigger.Entry entryPointerEnterMainMenuStart =
                 new EventTrigger.Entry {eventID = EventTriggerType.PointerEnter};
-            entryPointerEnterMainMenuCreateRoom.callback.AddListener(delegate
+            entryPointerEnterMainMenuStart.callback.AddListener(delegate
             {
-                OnPointerEnterDelegate(MenuState.Launch_CreateRoom, mainMenuCreateRoomButton);
+                OnPointerEnterDelegate(MenuState.Launch_Start, mainMenuStartButton);
             });
-            eventTriggerMainMenuCreateRoom.triggers.Add(entryPointerEnterMainMenuCreateRoom);
+            eventTriggerMainMenuStart.triggers.Add(entryPointerEnterMainMenuStart);
 
-            EventTrigger.Entry entryPointerExitMainMenuCreateRoom =
+            EventTrigger.Entry entryPointerExitMainMenuStart =
                 new EventTrigger.Entry {eventID = EventTriggerType.PointerExit};
-            entryPointerExitMainMenuCreateRoom.callback.AddListener(delegate
+            entryPointerExitMainMenuStart.callback.AddListener(delegate
             {
-                OnPointerExitDelegate(MenuState.Launch_CreateRoom, mainMenuCreateRoomButton);
+                OnPointerExitDelegate(MenuState.Launch_Start, mainMenuStartButton);
             });
-            eventTriggerMainMenuCreateRoom.triggers.Add(entryPointerExitMainMenuCreateRoom);
+            eventTriggerMainMenuStart.triggers.Add(entryPointerExitMainMenuStart);
 
-            EventTrigger.Entry entryPointerClickMainMenuCreateRoom =
+            EventTrigger.Entry entryPointerClickMainMenuStart =
                 new EventTrigger.Entry {eventID = EventTriggerType.PointerClick};
-            entryPointerClickMainMenuCreateRoom.callback.AddListener(delegate
+            entryPointerClickMainMenuStart.callback.AddListener(delegate
             {
-                OnPointerClickDelegate(MenuState.Launch_CreateRoom, mainMenuCreateRoomButton);
+                OnPointerClickDelegate(MenuState.Launch_Start, mainMenuStartButton);
             });
-            eventTriggerMainMenuCreateRoom.triggers.Add(entryPointerClickMainMenuCreateRoom);
+            eventTriggerMainMenuStart.triggers.Add(entryPointerClickMainMenuStart);
 
             
-            
-            mainMenuJoinRoomButton = mainMenuRootTransform.Find("Join Room").GetComponent<Button>();
-
-            EventTrigger eventTriggerMainMenuJoinRoom =
-                GetOrAddComponent<EventTrigger>(mainMenuJoinRoomButton.gameObject);
-            EventTrigger.Entry entryPointerEnterMainMenuJoinRoom =
-                new EventTrigger.Entry {eventID = EventTriggerType.PointerEnter};
-            entryPointerEnterMainMenuJoinRoom.callback.AddListener(delegate
-            {
-                OnPointerEnterDelegate(MenuState.Launch_JoinRoom, mainMenuJoinRoomButton);
-            });
-            eventTriggerMainMenuJoinRoom.triggers.Add(entryPointerEnterMainMenuJoinRoom);
-
-            EventTrigger.Entry entryPointerExitMainMenuJoinRoom =
-                new EventTrigger.Entry {eventID = EventTriggerType.PointerExit};
-            entryPointerExitMainMenuJoinRoom.callback.AddListener(delegate
-            {
-                OnPointerExitDelegate(MenuState.Launch_JoinRoom, mainMenuJoinRoomButton);
-            });
-            eventTriggerMainMenuJoinRoom.triggers.Add(entryPointerExitMainMenuJoinRoom);
-
-            EventTrigger.Entry entryPointerClickMainMenuJoinRoom =
-                new EventTrigger.Entry {eventID = EventTriggerType.PointerClick};
-            entryPointerClickMainMenuJoinRoom.callback.AddListener(delegate
-            {
-                OnPointerClickDelegate(MenuState.Launch_JoinRoom, mainMenuJoinRoomButton);
-            });
-            eventTriggerMainMenuJoinRoom.triggers.Add(entryPointerClickMainMenuJoinRoom);
-
             mainMenuQuitButton = mainMenuRootTransform.Find("Quit").GetComponent<Button>();
 
             EventTrigger eventTriggerMainMenuQuit =
@@ -157,32 +118,31 @@ namespace OSS.Multiplay.UI
             return component;
         }
 
+        private Animator mainMenuAnimator;
         private void OnEnable()
         {
-            SetMenuEnabled(MenuState.MainMenu);
+            mainMenuRootTransform = transform.Find("MainMenu");
+            mainMenuAnimator = mainMenuRootTransform.GetComponent<Animator>();
+            mainMenuAnimator.Play("OnEnable");
         }
 
-        public void SetMenuEnabled(in MenuState menuState)
+        public IEnumerator SetMenuEnabled(MenuState menuState)
         {
+            mainMenuAnimator.Play("OnDisable");
+
+            yield return new WaitForSeconds(0.1f);
+            
             switch (menuState)
             {
                 case MenuState.MainMenu:
-                    createRoomRootTransform.gameObject.SetActive(false);
-                    joinRoomRootTransform.gameObject.SetActive(false);
+                    roomListRootTransform.gameObject.SetActive(false);
 
                     mainMenuRootTransform.gameObject.SetActive(true);
                     break;
-                case MenuState.Launch_CreateRoom:
-                    joinRoomRootTransform.gameObject.SetActive(false);
+                case MenuState.Launch_Start:
                     mainMenuRootTransform.gameObject.SetActive(false);
 
-                    createRoomRootTransform.gameObject.SetActive(true);
-                    break;
-                case MenuState.Launch_JoinRoom:
-                    createRoomRootTransform.gameObject.SetActive(false);
-                    mainMenuRootTransform.gameObject.SetActive(false);
-
-                    joinRoomRootTransform.gameObject.SetActive(true);
+                    roomListRootTransform.gameObject.SetActive(true);
                     break;
                 case MenuState.Quit:
 #if UNITY_EDITOR
@@ -198,31 +158,17 @@ namespace OSS.Multiplay.UI
 
         private void OnPointerEnterDelegate(in MenuState menuState, in Button button)
         {
-            Coroutine coroutine = buttonCoroutine.ContainsKey(menuState) ? buttonCoroutine[menuState] : null;
-            if (coroutine != null)
-            {
-                StopCoroutine(coroutine);
-                coroutine = null;
-            }
-
-            coroutine = StartCoroutine(OnPointerEnterEvent(button));
+            button.GetComponent<Animation>().Play("OnPointerEnter");
         }
 
         private void OnPointerExitDelegate(in MenuState menuState, in Button button)
         {
-            Coroutine coroutine = buttonCoroutine.ContainsKey(menuState) ? buttonCoroutine[menuState] : null;
-            if (coroutine != null)
-            {
-                StopCoroutine(coroutine);
-                coroutine = null;
-            }
-
-            coroutine = StartCoroutine(OnPointerExitEvent(button));
+            button.GetComponent<Animation>().Play("OnPointerExit");
         }
 
         private void OnPointerClickDelegate(in MenuState menuState, in Button button)
         {
-            SetMenuEnabled(menuState);
+            StartCoroutine(SetMenuEnabled(menuState));
         }
 
         private void CreateRoomButtonClick()
@@ -248,7 +194,7 @@ namespace OSS.Multiplay.UI
 
                 GameObject roomButtonGameObject = GameObject.Instantiate(roomButtonItemPrefab);
                 RectTransform roomButtonRectTransform = (RectTransform) roomButtonGameObject.transform;
-                roomButtonRectTransform.SetParent(joinRoomListScrollViewContent.transform);
+                roomButtonRectTransform.SetParent(roomListScrollViewContent.transform);
                 int lastIndex = roomButtonList.Count;
                 Vector3 roomButtonPosition = roomButtonRectTransform.position;
                 roomButtonPosition.y = lastIndex * roomButtonRectTransform.rect.height * -1;
@@ -262,42 +208,6 @@ namespace OSS.Multiplay.UI
                 roomButton.onClick.AddListener(delegate { launcher.JoinRoom(roomInfo.Name); });
                 roomButtonList.Add(roomButton);
             }
-        }
-
-        private IEnumerator OnPointerEnterEvent(Button button)
-        {
-            Vector3 startScale = button.transform.localScale;
-            Vector3 targetScale = new Vector3(1.2f, 1.2f, 1.2f);
-
-            yield return StartCoroutine(OnPointerEventButtonResize(startScale, targetScale, button));
-        }
-
-        private IEnumerator OnPointerExitEvent(Button button)
-        {
-            Vector3 startScale = button.transform.localScale;
-            Vector3 targetScale = Vector3.one;
-
-            yield return StartCoroutine(OnPointerEventButtonResize(startScale, targetScale, button));
-        }
-
-        private IEnumerator OnPointerEventButtonResize(Vector3 startScale, Vector3 targetScale, Button button)
-        {
-            Vector3 currentScale = startScale;
-
-            float t = 0;
-            while (t <= 1.0f)
-            {
-                float scale = Mathf.Lerp(startScale.x, targetScale.x, t);
-                t += Time.deltaTime * 10;
-
-                currentScale.x = currentScale.y = currentScale.y = scale;
-
-                button.transform.localScale = currentScale;
-
-                yield return null;
-            }
-
-            button.transform.localScale = targetScale;
         }
     }
 }
