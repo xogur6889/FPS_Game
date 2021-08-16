@@ -15,8 +15,6 @@ namespace OSS.Launcher.UI
         private Coroutine coroutine = null;
         private bool isNeedIgnored = false;
 
-        [SerializeField] private LauncherUI.MenuState menuState;
-
         private void Awake()
         {
             launcherUI = transform.root.GetComponent<LauncherUI>();
@@ -139,7 +137,7 @@ namespace OSS.Launcher.UI
             transform.localScale = targetScale;
             Debug.Log("Finished OnPointerClick Coroutine");
             
-            launcherUI.SetMenuEnabled(menuState);
+            // launcherUI.SetMenuEnabled(menuState);
         }
     }
 }
