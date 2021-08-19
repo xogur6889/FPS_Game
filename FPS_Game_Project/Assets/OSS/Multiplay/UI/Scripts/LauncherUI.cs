@@ -28,22 +28,22 @@ namespace OSS.Multiplay.UI
         }
 
         private void Setup()
-        { 
+        {
             mainMenu = new MainMenu(transform.Find("MainMenu"));
             roomList = new RoomList(transform.Find("RoomList"));
-            
+
             SetupButtonEvents();
         }
 
         private void SetupButtonEvents()
         {
             mainMenu.SetupPointEvents(MainMenu.ButtonType.Start,
-                () => OnPointerEnter(mainMenu.buttons[MainMenu.ButtonType.Start]),
-                () => OnPointerExit(mainMenu.buttons[MainMenu.ButtonType.Start]),
+                () => StartCoroutine(OnPointerEnter(mainMenu.buttons[MainMenu.ButtonType.Start])),
+                () => StartCoroutine(OnPointerExit(mainMenu.buttons[MainMenu.ButtonType.Start])),
                 () => StartCoroutine(OnEnableMenu(MenuType.RoomList)));
             mainMenu.SetupPointEvents(MainMenu.ButtonType.Quit,
-                () => OnPointerEnter(mainMenu.buttons[MainMenu.ButtonType.Quit]),
-                () => OnPointerExit(mainMenu.buttons[MainMenu.ButtonType.Quit]),
+                () => StartCoroutine(OnPointerEnter(mainMenu.buttons[MainMenu.ButtonType.Quit])),
+                () => StartCoroutine(OnPointerExit(mainMenu.buttons[MainMenu.ButtonType.Quit])),
                 () =>
                 {
 #if UNITY_EDITOR
@@ -52,11 +52,11 @@ namespace OSS.Multiplay.UI
                     Application.Quit();
 #endif
                 });
-            
+
             mainMenu.SetActiveEvents(
                 () => StartCoroutine(EnableMainMenu()),
                 () => StartCoroutine(DisableMainMenu()));
-            
+
             roomList.SetActiveEvents(
                 () => StartCoroutine(EnableRoomList()),
                 () => StartCoroutine(DisableRoomList()));
@@ -76,8 +76,20 @@ namespace OSS.Multiplay.UI
 
         private IEnumerator EnableMainMenu()
         {
-            OnEnable(MenuType.Main, mainMenu.buttons[MainMenu.ButtonType.Start]);
-            OnEnable(MenuType.Main, mainMenu.buttons[MainMenu.ButtonType.Quit]);
+            if (mainMenu.buttonCoroutines.TryGetValue(mainMenu.buttons[MainMenu.ButtonType.Start],
+                out Coroutine startButtonCoroutine))
+            {
+                StopCoroutine(startButtonCoroutine);
+            }
+            startButtonCoroutine = StartCoroutine(OnEnableMenu(mainMenu.buttons[MainMenu.ButtonType.Start].gameObject));
+
+            if (mainMenu.buttonCoroutines.TryGetValue(mainMenu.buttons[MainMenu.ButtonType.Start],
+                out Coroutine quitButtonCoroutine))
+            {
+                StopCoroutine(quitButtonCoroutine);
+            }
+            quitButtonCoroutine =
+                StartCoroutine(OnEnableMenu(mainMenu.buttons[MainMenu.ButtonType.Quit].gameObject));
 
             if (mainMenu.coroutineTitle != null)
             {
@@ -86,30 +98,48 @@ namespace OSS.Multiplay.UI
             }
 
             mainMenu.textTitle.gameObject.SetActive(true);
-            yield return null;
-            
-            yield return mainMenu.PlayTextAnimation("Title_OnEnable");
+            mainMenu.coroutineTitle = StartCoroutine(mainMenu.PlayTextAnimation("Title_OnEnable"));
+
+            yield return startButtonCoroutine;
+            yield return quitButtonCoroutine;
+            yield return mainMenu.coroutineTitle;
+
+            Debug.Log("Finished enable start menu");
 
             currentMenuType = MenuType.Main;
         }
 
         private IEnumerator DisableMainMenu()
         {
-            Coroutine startButtonCoroutine = StartCoroutine(OnDisable(mainMenu.buttons[MainMenu.ButtonType.Start].gameObject));
-            Coroutine quitButtonCoroutine = StartCoroutine(OnDisable(mainMenu.buttons[MainMenu.ButtonType.Quit].gameObject));
-                    
+            if (mainMenu.buttonCoroutines.TryGetValue(mainMenu.buttons[MainMenu.ButtonType.Start],
+                out Coroutine startButtonCoroutine))
+            {
+                StopCoroutine(startButtonCoroutine);
+            }
+            startButtonCoroutine = StartCoroutine(OnDisableMenu(mainMenu.buttons[MainMenu.ButtonType.Start].gameObject));
+
+            if (mainMenu.buttonCoroutines.TryGetValue(mainMenu.buttons[MainMenu.ButtonType.Start],
+                out Coroutine quitButtonCoroutine))
+            {
+                StopCoroutine(quitButtonCoroutine);
+            }
+            quitButtonCoroutine =
+                StartCoroutine(OnDisableMenu(mainMenu.buttons[MainMenu.ButtonType.Quit].gameObject));
+
             if (mainMenu.coroutineTitle != null)
             {
                 StopCoroutine(mainMenu.coroutineTitle);
                 mainMenu.coroutineTitle = null;
             }
 
-            Coroutine titleTextCoroutine = StartCoroutine(mainMenu.PlayTextAnimation("Title_OnDisable"));
+            mainMenu.coroutineTitle = StartCoroutine(mainMenu.PlayTextAnimation("Title_OnDisable"));
+
+            yield return startButtonCoroutine;
+            yield return quitButtonCoroutine;
+            yield return mainMenu.coroutineTitle;
+            
             mainMenu.textTitle.gameObject.SetActive(false);
-
             currentMenuType = MenuType.None;
-
-            while (startButtonCoroutine != null && quitButtonCoroutine != null && titleTextCoroutine != null) yield return null;
         }
 
         private IEnumerator EnableRoomList()
@@ -130,110 +160,30 @@ namespace OSS.Multiplay.UI
         {
             switch (menuType)
             {
-                case MenuType.Main: 
-                    roomList.SetActive(false);
-
-                    yield return new WaitUntil(() => currentMenuType == MenuType.None);
+                case MenuType.Main:
+                    // roomList.SetActive(false);
+                    // TODO (OSS) Disable current menu and turn on start menu
                     
                     mainMenu.SetActive(true);
                     break;
                 case MenuType.RoomList:
                     mainMenu.SetActive(false);
-                    // roomList.SetActive(true);
+                    
+                    yield return new WaitUntil(() => currentMenuType == MenuType.None);
+                    
+                    roomList.SetActive(true);
                     break;
-            }
-        }
-
-//         public IEnumerator SetMenuEnabled(MenuState menuState)
-//         {
-//             mainMenuAnimator.Play("OnDisable");
-//
-//             yield return new WaitForSeconds(0.1f);
-//             
-//             switch (menuState)
-//             {
-//                 case MenuState.MainMenu:
-//                     roomListRootTransform.gameObject.SetActive(false);
-//
-//                     mainMenuRootTransform.gameObject.SetActive(true);
-//                     break;
-//                 case MenuState.LaunchStart:
-//                     mainMenuRootTransform.gameObject.SetActive(false);
-//
-//                     roomListRootTransform.gameObject.SetActive(true);
-//                     break;
-//                 case MenuState.Quit:
-// #if UNITY_EDITOR
-//                     UnityEditor.EditorApplication.isPlaying = false;
-// #else
-//                     Application.Quit();
-// #endif
-//                     break;
-//                 default:
-//                     throw new ArgumentOutOfRangeException(nameof(menuState), menuState, null);
-//             }
-//         }
-
-        private void OnEnable(in MenuType menuType, in Button button)
-        {
-            Coroutine coroutine;
-            
-            switch (menuType)
-            {
-                case MenuType.Main:
-                    if (mainMenu.buttonCoroutines.TryGetValue(button, out coroutine))
-                    {
-                        StopCoroutine(coroutine);
-                    }
+                case MenuType.None:
                     break;
-                case MenuType.RoomList:
+                case MenuType.SignIn:
+                    break;
+                case MenuType.SignUp:
+                    break;
+                case MenuType.CreateRoom:
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(menuType), menuType, null);
             }
-
-            coroutine = StartCoroutine(OnEnable(button.gameObject));
-        }
-
-        private void OnDisable(in MenuType menuType, in Button button)
-        {
-            Coroutine coroutine;
-            
-            switch (menuType)
-            {
-                case MenuType.Main:
-                    if (mainMenu.buttonCoroutines.TryGetValue(button, out coroutine))
-                    {
-                        StopCoroutine(coroutine);
-                    }
-                    break;
-                case MenuType.RoomList:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(menuType), menuType, null);
-            }
-
-            coroutine = StartCoroutine(OnDisable(button.gameObject));
-        }
-
-        private void OnPointerEnter(in Button button)
-        {
-            if (mainMenu.buttonCoroutines.TryGetValue(button, out Coroutine coroutine))
-            {
-                StopCoroutine(coroutine);
-            }
-
-            coroutine = StartCoroutine(OnPointerEnter(button.gameObject));
-        }
-
-        private void OnPointerExit(in Button button)
-        {
-            if (mainMenu.buttonCoroutines.TryGetValue(button, out Coroutine coroutine))
-            {
-                StopCoroutine(coroutine);
-            }
-
-            coroutine = StartCoroutine(OnPointerExit(button.gameObject));
         }
 
         public void UpdateRoomList(in List<RoomInfo> roomInfoList)
@@ -267,7 +217,7 @@ namespace OSS.Multiplay.UI
             }
         }
 
-        private IEnumerator OnEnable(GameObject gameObject)
+        private IEnumerator OnEnableMenu(GameObject gameObject)
         {
             Vector3 startScale = Vector3.zero;
             Vector3 targetScale = Vector3.one;
@@ -275,28 +225,42 @@ namespace OSS.Multiplay.UI
             yield return ChangeGameObjectScale(gameObject, startScale, targetScale);
         }
 
-        private IEnumerator OnDisable(GameObject gameObject)
+        private IEnumerator OnDisableMenu(GameObject gameObject)
         {
             Vector3 startScale = Vector3.one;
-            Vector3 targetScale = Vector3.one;
+            Vector3 targetScale = Vector3.zero;
 
             yield return ChangeGameObjectScale(gameObject, startScale, targetScale);
         }
 
-        private IEnumerator OnPointerEnter(GameObject gameObject)
+        private IEnumerator OnPointerEnter(Button button)
         {
-            Vector3 startScale = gameObject.transform.localScale;
+            if (mainMenu.buttonCoroutines.TryGetValue(button, out Coroutine coroutine))
+            {
+                StopCoroutine(coroutine);
+            }
+
+            Vector3 startScale = button.gameObject.transform.localScale;
             Vector3 targetScale = new Vector3(1.2f, 1.2f, 1.2f);
 
-            yield return ChangeGameObjectScale(gameObject, startScale, targetScale);
+            coroutine = StartCoroutine(ChangeGameObjectScale(button.gameObject, startScale, targetScale));
+
+            yield return coroutine;
         }
 
-        private IEnumerator OnPointerExit(GameObject gameObject)
+        private IEnumerator OnPointerExit(Button button)
         {
-            Vector3 startScale = gameObject.transform.localScale;
+            if (mainMenu.buttonCoroutines.TryGetValue(button, out Coroutine coroutine))
+            {
+                StopCoroutine(coroutine);
+            }
+            
+            Vector3 startScale = button.gameObject.transform.localScale;
             Vector3 targetScale = Vector3.one;
 
-            yield return ChangeGameObjectScale(gameObject, startScale, targetScale);
+            coroutine = StartCoroutine(ChangeGameObjectScale(button.gameObject, startScale, targetScale));
+
+            yield return coroutine;
         }
 
         private IEnumerator ChangeGameObjectScale(GameObject targetGameObject, Vector3 startScale, Vector3 targetScale)

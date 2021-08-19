@@ -15,7 +15,10 @@ namespace OSS.Launcher.UI
     {
         None,
         Main,
-        RoomList
+        SignIn,
+        SignUp,
+        RoomList,
+        CreateRoom
     }
 
     public class MainMenu
@@ -31,6 +34,8 @@ namespace OSS.Launcher.UI
         public Dictionary<ButtonType, Button> buttons { get; private set; }
         public Dictionary<Button, Coroutine> buttonCoroutines { get; private set; }
 
+        private readonly Animator animatorButtons;
+        
         public Text textTitle { get; private set; }
         private readonly Animator animatorTitle;
         public Coroutine coroutineTitle;
@@ -38,6 +43,8 @@ namespace OSS.Launcher.UI
         private UnityAction onEnableAction;
 
         private UnityAction onDisableAction;
+        
+        private bool isDisable = false;
 
         public MainMenu(Transform transformParent)
         {
@@ -65,7 +72,8 @@ namespace OSS.Launcher.UI
                 new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
             entryPointerEnter.callback.AddListener(delegate
             {
-                 pointerEnterAction();
+                if (isDisable == false)
+                    pointerEnterAction();
             });
             eventTrigger.triggers.Add(entryPointerEnter);
 
@@ -73,14 +81,16 @@ namespace OSS.Launcher.UI
                 new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
             entryPointerExit.callback.AddListener(delegate
             {
-                pointerExitAction();
+                if (isDisable == false)
+                    pointerExitAction();
             });
             eventTrigger.triggers.Add(entryPointerExit);
 
             EventTrigger.Entry entryPointerClick = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
             entryPointerClick.callback.AddListener(delegate
             {
-                pointerClickAction();
+                if (isDisable == false)
+                    pointerClickAction();
             });
             eventTrigger.triggers.Add(entryPointerClick);
         }
@@ -93,14 +103,14 @@ namespace OSS.Launcher.UI
 
         public void SetActive(bool active)
         {
-            root.gameObject.SetActive(active);
-
             if (active == true)
             {
+                isDisable = false;
                 onEnableAction();
             }
             else
             {
+                isDisable = true;
                 onDisableAction();
             }
         }
@@ -110,14 +120,11 @@ namespace OSS.Launcher.UI
             animatorTitle.Play(clipName);
             RuntimeAnimatorController animController = animatorTitle.runtimeAnimatorController;
             AnimationClip clip = animController.animationClips.First(animationClip => animationClip.name == clipName);
-            Debug.Log("Current play animationClip Name: " + clip.name + ", length : " + clip.length + "(s)");
 
             yield return new WaitForSeconds(clip.length);
+            
 
             coroutineTitle = null;
-            
-            Debug.Log("finished title animation");
-            
         }
     }
 
