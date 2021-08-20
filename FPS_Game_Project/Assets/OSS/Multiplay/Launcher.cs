@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using OSS.Multiplay.UI;
+using OSS.Launcher.UI;
 using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;

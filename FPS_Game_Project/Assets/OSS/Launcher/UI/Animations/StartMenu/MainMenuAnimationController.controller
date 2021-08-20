@@ -51,7 +51,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: OnDisable
+  m_Name: OnDisable_StartMenuButtons
   m_Speed: 1
   m_CycleOffset: 0
   m_Transitions: []
@@ -121,7 +121,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: OnEnable
+  m_Name: OnEnable_StartMenuButtons
   m_Speed: 1
   m_CycleOffset: 0
   m_Transitions: []
@@ -151,13 +151,13 @@ AnimatorStateMachine:
   m_ChildStates:
   - serializedVersion: 1
     m_State: {fileID: 3579596004949507485}
-    m_Position: {x: 280, y: 110, z: 0}
+    m_Position: {x: 390, y: 190, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 1322873719836066363}
     m_Position: {x: 280, y: 30, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -4053968607995406175}
-    m_Position: {x: 280, y: 190, z: 0}
+    m_Position: {x: 510, y: 30, z: 0}
   m_ChildStateMachines: []
   m_AnyStateTransitions:
   - {fileID: -6459263534288827498}
@@ -176,7 +176,7 @@ AnimatorState:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Idle
+  m_Name: Idle_StartMenuButtons
   m_Speed: 1
   m_CycleOffset: 0
   m_Transitions: []
