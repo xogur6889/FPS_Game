@@ -206,7 +206,6 @@ namespace OSS.Launcher.UI
             {
                 StopCoroutine(startMenu.coroutineButtons);
                 startMenu.coroutineButtons = null;
-                ;
             }
 
             startMenu.coroutineButtons = StartCoroutine(startMenu.PlayEnableAnimation());
@@ -219,7 +218,7 @@ namespace OSS.Launcher.UI
 
             startMenu.textTitle.gameObject.SetActive(true);
             
-            startMenu.coroutineTitle = StartCoroutine(startMenu.PlayTextAnimation("Title_OnEnable"));
+            startMenu.coroutineTitle = StartCoroutine(startMenu.PlayEnableTitleText());
 
             yield return startMenu.coroutineButtons;
             yield return startMenu.coroutineTitle;
@@ -237,18 +236,17 @@ namespace OSS.Launcher.UI
 
             startMenu.coroutineButtons = StartCoroutine(startMenu.PlayDisableAnimation());
 
-            if (startMenu.coroutineTitle != null)
+            if (startMenu.blurBackgroundCoroutine != null)
             {
-                StopCoroutine(startMenu.coroutineTitle);
-                startMenu.coroutineTitle = null;
+                StopCoroutine(startMenu.blurBackgroundCoroutine);
+                startMenu.blurBackgroundCoroutine = null;
             }
+            startMenu.blurBackgroundCoroutine = StartCoroutine(startMenu.BlurBackground());
 
-            startMenu.coroutineTitle = StartCoroutine(startMenu.PlayTextAnimation("Title_OnDisable"));
-
+            yield return startMenu.blurBackgroundCoroutine;
             yield return startMenu.coroutineButtons;
             yield return startMenu.coroutineTitle;
 
-            startMenu.textTitle.gameObject.SetActive(false);
             startMenu.root.gameObject.SetActive(false);
 
             currentMenuType = MenuType.None;
@@ -377,6 +375,24 @@ namespace OSS.Launcher.UI
             }
 
             createRoom.coroutineButtons = StartCoroutine(createRoom.PlayDisableAnimation());
+            
+            
+            if (startMenu.coroutineTitle != null)
+            {
+                StopCoroutine(startMenu.coroutineTitle);
+                startMenu.coroutineTitle = null;
+            }
+            
+            startMenu.coroutineTitle = StartCoroutine(startMenu.PlayDisableTitleText());
+
+            if (startMenu.blurBackgroundCoroutine != null)
+            {
+                StopCoroutine(startMenu.blurBackgroundCoroutine);
+                startMenu.blurBackgroundCoroutine = null;
+            }
+            startMenu.blurBackgroundCoroutine = StartCoroutine(startMenu.ClearBackground());
+
+            
             yield return createRoom.coroutineButtons;
 
             currentMenuType = MenuType.None;
