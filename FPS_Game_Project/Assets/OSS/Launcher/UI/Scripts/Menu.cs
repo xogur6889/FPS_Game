@@ -35,9 +35,13 @@ namespace OSS.Launcher.UI
         public Coroutine coroutineButtons;
         public Animator animatorButtons { get; private set; }
 
+        public Coroutine blurBackgroundCoroutine;
+
         public Text textTitle { get; private set; }
         private readonly Animator animatorTitle;
         public Coroutine coroutineTitle;
+
+        private Image blurImage;
 
         private UnityAction onEnableAction;
 
@@ -49,9 +53,16 @@ namespace OSS.Launcher.UI
         {
             root = transformParent;
 
-            Transform titleTransform = root.parent.Find("Title");
+            Transform parent = root.parent;
+            Transform titleTransform = parent.Find("Title");
             textTitle = titleTransform.GetComponent<Text>();
             animatorTitle = titleTransform.GetComponent<Animator>();
+
+            blurImage = parent.Find("Blur Panel").GetComponent<Image>();
+            
+            Material material = blurImage.material; 
+            material.SetFloat("_Radius", 1);
+            blurImage.gameObject.SetActive(false);
 
             buttons = new Dictionary<ButtonType, Button>
             {
@@ -118,7 +129,19 @@ namespace OSS.Launcher.UI
             }
         }
 
-        public IEnumerator PlayTextAnimation(string clipName)
+        public IEnumerator PlayEnableTitleText()
+        {   
+            textTitle.gameObject.SetActive(true);
+            yield return PlayTextAnimation("Title_OnEnable");
+        }
+
+        public IEnumerator PlayDisableTitleText()
+        {
+            yield return PlayTextAnimation("Title_OnDisable");
+            textTitle.gameObject.SetActive(false);
+        }
+
+        private IEnumerator PlayTextAnimation(string clipName)
         {
             while (animatorTitle.enabled == false || animatorTitle.gameObject.activeSelf == false) yield return null;
             
@@ -154,6 +177,45 @@ namespace OSS.Launcher.UI
             yield return new WaitForSeconds(animationClip.length);
 
             coroutineButtons = null;
+        }
+        
+        public IEnumerator BlurBackground()
+        {
+            Material material = blurImage.material;
+            
+            const float maxValue = 4.0f;
+            float currentValue = material.GetFloat("_Radius");
+
+            yield return BackgroundBlurred(currentValue, maxValue);
+        }
+
+        public IEnumerator ClearBackground()
+        {
+            Material material = blurImage.material;
+            
+            const float maxValue = 1.0f;
+            float currentValue = material.GetFloat("_Radius");
+
+            yield return BackgroundBlurred(currentValue, maxValue);
+            
+            blurImage.gameObject.SetActive(false);
+        }
+
+        private IEnumerator BackgroundBlurred(float current, float max)
+        {
+            blurImage.gameObject.SetActive(true);
+            Material material = blurImage.material;
+            
+            float t = 0;
+            while (t <= 1.0f)
+            {
+                float radius = Mathf.Lerp(current, max, t);
+                material.SetFloat("_Radius", radius);
+
+                t += Time.deltaTime * 10;
+
+                yield return null;
+            }
         }
     }
 
