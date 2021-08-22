@@ -2,8 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using OSS.Launcher.UI;
-using Photon.Pun;
-using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,8 +9,6 @@ namespace OSS.Launcher.UI
 {
     public class LauncherUI : MonoBehaviour
     {
-        [SerializeField] private Multiplay.Launcher launcher;
-
         [SerializeField] private GameObject roomButtonItemPrefab;
         private readonly List<Button> roomButtonList = new List<Button>();
 
@@ -180,7 +176,7 @@ namespace OSS.Launcher.UI
 
                     createRoom.closeButtonCoroutine = StartCoroutine(createRoom.PointerExitCloseButton());
                 },
-                () => StartCoroutine(DisableCreateRoom(MenuType.Start)));
+                () => StartCoroutine(DisableCreateRoom(MenuType.RoomList)));
             
             createRoom.SetupPointEvents(CreateRoom.ButtonType.CreateRoom,
                 () => { },
@@ -217,9 +213,17 @@ namespace OSS.Launcher.UI
             }
 
             startMenu.textTitle.gameObject.SetActive(true);
-            
             startMenu.coroutineTitle = StartCoroutine(startMenu.PlayEnableTitleText());
 
+            if (startMenu.blurBackgroundCoroutine != null)
+            {
+                StopCoroutine(startMenu.blurBackgroundCoroutine);
+                startMenu.blurBackgroundCoroutine = null;
+            }
+
+            startMenu.blurBackgroundCoroutine = StartCoroutine(startMenu.ClearBackground());
+
+            yield return startMenu.blurBackgroundCoroutine;
             yield return startMenu.coroutineButtons;
             yield return startMenu.coroutineTitle;
             
@@ -375,27 +379,33 @@ namespace OSS.Launcher.UI
             }
 
             createRoom.coroutineButtons = StartCoroutine(createRoom.PlayDisableAnimation());
-            
-            
-            if (startMenu.coroutineTitle != null)
-            {
-                StopCoroutine(startMenu.coroutineTitle);
-                startMenu.coroutineTitle = null;
-            }
-            
-            startMenu.coroutineTitle = StartCoroutine(startMenu.PlayDisableTitleText());
 
-            if (startMenu.blurBackgroundCoroutine != null)
+            if (menuType == MenuType.None)
             {
-                StopCoroutine(startMenu.blurBackgroundCoroutine);
-                startMenu.blurBackgroundCoroutine = null;
-            }
-            startMenu.blurBackgroundCoroutine = StartCoroutine(startMenu.ClearBackground());
-
+                if (startMenu.coroutineTitle != null)
+                {
+                    StopCoroutine(startMenu.coroutineTitle);
+                    startMenu.coroutineTitle = null;
+                }
             
+                startMenu.coroutineTitle = StartCoroutine(startMenu.PlayDisableTitleText());
+
+                if (startMenu.blurBackgroundCoroutine != null)
+                {
+                    StopCoroutine(startMenu.blurBackgroundCoroutine);
+                    startMenu.blurBackgroundCoroutine = null;
+                }
+                startMenu.blurBackgroundCoroutine = StartCoroutine(startMenu.ClearBackground());
+            }
+
+            if (menuType == MenuType.None)
+            {
+                yield return startMenu.coroutineTitle;
+                yield return startMenu.blurBackgroundCoroutine;
+            }
             yield return createRoom.coroutineButtons;
 
-            currentMenuType = MenuType.None;
+            currentMenuType = menuType;
 
             createRoom.root.gameObject.SetActive(false);
 
@@ -447,36 +457,36 @@ namespace OSS.Launcher.UI
             }
         }
 
-        public void UpdateRoomList(in List<RoomInfo> roomInfoList)
-        {
-            foreach (RoomInfo roomInfo in roomInfoList)
-            {
-                int index = roomButtonList.FindIndex(roomButton => roomButton.name == roomInfo.Name);
-                if (index != -1 && roomInfo.RemovedFromList)
-                {
-                    Destroy(roomButtonList[index].gameObject);
-                    roomButtonList.RemoveAt(index);
-                }
-
-                if (index != -1 || roomInfo.IsOpen != true || roomInfo.PlayerCount >= roomInfo.MaxPlayers) continue;
-
-                GameObject roomButtonGameObject = Instantiate(roomButtonItemPrefab);
-                RectTransform roomButtonRectTransform = (RectTransform)roomButtonGameObject.transform;
-                // roomButtonRectTransform.SetParent(roomListScrollViewContent.transform);
-                int lastIndex = roomButtonList.Count;
-                Vector3 roomButtonPosition = roomButtonRectTransform.position;
-                roomButtonPosition.y = lastIndex * roomButtonRectTransform.rect.height * -1;
-                roomButtonRectTransform.position = roomButtonPosition;
-                RectTransform roomButtonParentRectTransform = (RectTransform)roomButtonRectTransform.parent.transform;
-                LayoutRebuilder.ForceRebuildLayoutImmediate(roomButtonParentRectTransform);
-
-                Button roomButton = roomButtonGameObject.GetComponent<Button>();
-                roomButton.name = roomInfo.Name;
-                roomButton.GetComponentInChildren<Text>().text = roomInfo.Name;
-                roomButton.onClick.AddListener(delegate { launcher.JoinRoom(roomInfo.Name); });
-                roomButtonList.Add(roomButton);
-            }
-        }
+        // public void UpdateRoomList(in List<RoomInfo> roomInfoList)
+        // {
+        //     foreach (RoomInfo roomInfo in roomInfoList)
+        //     {
+        //         int index = roomButtonList.FindIndex(roomButton => roomButton.name == roomInfo.Name);
+        //         if (index != -1 && roomInfo.RemovedFromList)
+        //         {
+        //             Destroy(roomButtonList[index].gameObject);
+        //             roomButtonList.RemoveAt(index);
+        //         }
+        //
+        //         if (index != -1 || roomInfo.IsOpen != true || roomInfo.PlayerCount >= roomInfo.MaxPlayers) continue;
+        //
+        //         GameObject roomButtonGameObject = Instantiate(roomButtonItemPrefab);
+        //         RectTransform roomButtonRectTransform = (RectTransform)roomButtonGameObject.transform;
+        //         // roomButtonRectTransform.SetParent(roomListScrollViewContent.transform);
+        //         int lastIndex = roomButtonList.Count;
+        //         Vector3 roomButtonPosition = roomButtonRectTransform.position;
+        //         roomButtonPosition.y = lastIndex * roomButtonRectTransform.rect.height * -1;
+        //         roomButtonRectTransform.position = roomButtonPosition;
+        //         RectTransform roomButtonParentRectTransform = (RectTransform)roomButtonRectTransform.parent.transform;
+        //         LayoutRebuilder.ForceRebuildLayoutImmediate(roomButtonParentRectTransform);
+        //
+        //         Button roomButton = roomButtonGameObject.GetComponent<Button>();
+        //         roomButton.name = roomInfo.Name;
+        //         roomButton.GetComponentInChildren<Text>().text = roomInfo.Name;
+        //         // roomButton.onClick.AddListener(delegate { launcher.JoinRoom(roomInfo.Name); });
+        //         roomButtonList.Add(roomButton);
+        //     }
+        // }
 
         // private IEnumerator OnEnableMenu(GameObject gameObject)
         // {
