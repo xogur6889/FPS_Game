@@ -12,13 +12,7 @@ namespace OSS.Launcher.UI
         [SerializeField] private GameObject roomButtonItemPrefab;
         private readonly List<Button> roomButtonList = new List<Button>();
 
-        private StartMenu startMenu;
-        private RoomList roomList;
-        private SignIn signIn;
-        private SignUp signUp;
-        private CreateRoom createRoom;
-
-        private MenuType currentMenuType = MenuType.Start;
+        private Dictionary<MenuType, Menu> menus;
 
         private void Awake()
         {
@@ -27,17 +21,18 @@ namespace OSS.Launcher.UI
 
         private void Setup()
         {
-            startMenu = new StartMenu(transform.Find("StartMenu"));
-            roomList = new RoomList(transform.Find("RoomList"));
-            signIn = new SignIn(transform.Find("Sign In"));
-            signUp = new SignUp(transform.Find("Sign Up"));
-            createRoom = new CreateRoom(transform.Find("Create Room"));
-
-            SetupButtonEvents();
+            menus = new Dictionary<MenuType, Menu> {
+                [MenuType.Start] = new StartMenu(this, transform.Find("StartMenu")), 
+                [MenuType.SignIn] = new SignIn(this, transform.Find("Sign In")),
+                [MenuType.SignUp] = new SignUp(this, transform.Find("Sign Up")),
+                [MenuType.RoomList] = new RoomList(this, transform.Find("RoomList")),
+                [MenuType.CreateRoom] = new CreateRoom(this, transform.Find("Create Room"))
+            };
         }
 
-        private void SetupButtonEvents()
+        private IEnumerator Start()
         {
+<<<<<<< HEAD
             startMenu.SetupPointEvents(StartMenu.ButtonType.Start,
                 () => StartCoroutine(OnPointerEnter(startMenu.buttons[StartMenu.ButtonType.Start])),
                 () => StartCoroutine(OnPointerExit(startMenu.buttons[StartMenu.ButtonType.Start])),
@@ -182,6 +177,9 @@ namespace OSS.Launcher.UI
                 () => { },
                 () => { },
                 () => StartCoroutine(DisableCreateRoom(MenuType.None)));
+=======
+            yield return Menu.SetActiveMenu(MenuType.Start);
+>>>>>>> UI
         }
 
         public static T GetOrAddComponent<T>(GameObject gameObject) where T : Component
@@ -191,6 +189,7 @@ namespace OSS.Launcher.UI
             return component;
         }
 
+<<<<<<< HEAD
         private void OnEnable()
         {
             StartCoroutine(OnEnableMenu(MenuType.Start));
@@ -487,52 +486,38 @@ namespace OSS.Launcher.UI
         //         roomButtonList.Add(roomButton);
         //     }
         // }
-
-        // private IEnumerator OnEnableMenu(GameObject gameObject)
-        // {
-        //     Vector3 startScale = Vector3.zero;
-        //     Vector3 targetScale = Vector3.one;
-        //
-        //     yield return ChangeGameObjectScale(gameObject, startScale, targetScale);
-        // }
-        //
-        // private IEnumerator OnDisableMenu(GameObject gameObject)
-        // {
-        //     Vector3 startScale = Vector3.one;
-        //     Vector3 targetScale = Vector3.zero;
-        //
-        //     yield return ChangeGameObjectScale(gameObject, startScale, targetScale);
-        // }
-
-        private IEnumerator OnPointerEnter(Button button)
+=======
+        public void UpdateRoomList(in List<RoomInfo> roomInfoList)
         {
-            if (startMenu.buttonCoroutines.TryGetValue(button, out Coroutine coroutine))
+            foreach (RoomInfo roomInfo in roomInfoList)
             {
-                StopCoroutine(coroutine);
+                int index = roomButtonList.FindIndex(roomButton => roomButton.name == roomInfo.Name);
+                if (index != -1 && roomInfo.RemovedFromList)
+                {
+                    Destroy(roomButtonList[index].gameObject);
+                    roomButtonList.RemoveAt(index);
+                }
+
+                if (index != -1 || roomInfo.IsOpen != true || roomInfo.PlayerCount >= roomInfo.MaxPlayers) continue;
+
+                GameObject roomButtonGameObject = Instantiate(roomButtonItemPrefab);
+                RectTransform roomButtonRectTransform = (RectTransform)roomButtonGameObject.transform;
+                // roomButtonRectTransform.SetParent(roomListScrollViewContent.transform);
+                int lastIndex = roomButtonList.Count;
+                Vector3 roomButtonPosition = roomButtonRectTransform.position;
+                roomButtonPosition.y = lastIndex * roomButtonRectTransform.rect.height * -1;
+                roomButtonRectTransform.position = roomButtonPosition;
+                RectTransform roomButtonParentRectTransform = (RectTransform)roomButtonRectTransform.parent.transform;
+                LayoutRebuilder.ForceRebuildLayoutImmediate(roomButtonParentRectTransform);
+
+                Button roomButton = roomButtonGameObject.GetComponent<Button>();
+                roomButton.name = roomInfo.Name;
+                roomButton.GetComponentInChildren<Text>().text = roomInfo.Name;
+                roomButton.onClick.AddListener(delegate { launcher.JoinRoom(roomInfo.Name); });
+                roomButtonList.Add(roomButton);
             }
-
-            Vector3 startScale = button.gameObject.transform.localScale;
-            Vector3 targetScale = new Vector3(1.2f, 1.2f, 1.2f);
-
-            coroutine = StartCoroutine(ChangeGameObjectScale(button.gameObject, startScale, targetScale));
-
-            yield return coroutine;
         }
-
-        private IEnumerator OnPointerExit(Button button)
-        {
-            if (startMenu.buttonCoroutines.TryGetValue(button, out Coroutine coroutine))
-            {
-                StopCoroutine(coroutine);
-            }
-
-            Vector3 startScale = button.gameObject.transform.localScale;
-            Vector3 targetScale = Vector3.one;
-
-            coroutine = StartCoroutine(ChangeGameObjectScale(button.gameObject, startScale, targetScale));
-
-            yield return coroutine;
-        }
+>>>>>>> UI
 
         private IEnumerator ChangeGameObjectScale(GameObject targetGameObject, Vector3 startScale, Vector3 targetScale)
         {
