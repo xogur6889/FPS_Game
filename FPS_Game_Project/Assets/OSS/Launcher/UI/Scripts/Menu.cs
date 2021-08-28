@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,123 +18,250 @@ namespace OSS.Launcher.UI
         CreateRoom
     }
 
-    public class StartMenu
+    public enum ButtonType
     {
-        public enum ButtonType
-        {
-            Start,
-            Quit
-        }
+        Start,
+        Close,
+        CreateRoom,
+        SignUp,
+        SignIn,
+        Check
+    }
 
-        public Transform root { get; private set; }
+    public abstract class Menu
+    {
+        protected static MenuType CurrentMenuType = MenuType.None;
+        protected static readonly Dictionary<MenuType, Menu> Menus = new Dictionary<MenuType, Menu>();
 
-        public Dictionary<ButtonType, Button> buttons { get; private set; }
-        public Dictionary<Button, Coroutine> buttonCoroutines { get; private set; }
+        protected readonly Transform Root;
+        private readonly MonoBehaviour Mono;
 
-        public Coroutine coroutineButtons;
-        public Animator animatorButtons { get; private set; }
+        protected Dictionary<Button, Coroutine> ButtonCoroutines;
+        protected Dictionary<ButtonType, Button> Buttons;
 
-        public Coroutine blurBackgroundCoroutine;
-
-        public Text textTitle { get; private set; }
-        private readonly Animator animatorTitle;
-        public Coroutine coroutineTitle;
-
-        private Image blurImage;
+        protected Coroutine CoroutineRoot;
+        private readonly Animator animatorRoot;
 
         private UnityAction onEnableAction;
-
         private UnityAction onDisableAction;
 
-        private bool isDisable = false;
+        protected abstract IEnumerator OnEnable();
+        protected abstract IEnumerator OnDisable(bool all = false);
 
-        public StartMenu(Transform transformParent)
+        protected Menu(MonoBehaviour monoBehaviour, Transform root)
         {
-            root = transformParent;
+            this.Mono = monoBehaviour;
+            this.Root = root;
 
-            Transform parent = root.parent;
-            Transform titleTransform = parent.Find("Title");
-            textTitle = titleTransform.GetComponent<Text>();
-            animatorTitle = titleTransform.GetComponent<Animator>();
+            Menu.CurrentMenuType = MenuType.None;
 
-            blurImage = parent.Find("Blur Panel").GetComponent<Image>();
-            
-            Material material = blurImage.material; 
-            material.SetFloat("_Radius", 1);
-            blurImage.gameObject.SetActive(false);
+            animatorRoot = this.Root.GetComponent<Animator>();
+            if (animatorRoot == null) Debug.LogError("Root ui object doesn't have animator component");
 
-            buttons = new Dictionary<ButtonType, Button>
-            {
-                [ButtonType.Start] = transformParent.Find("Start").GetComponent<Button>(),
-                [ButtonType.Quit] = transformParent.Find("Quit").GetComponent<Button>()
-            };
-
-            animatorButtons = root.GetComponent<Animator>();
-            
-            buttonCoroutines = new Dictionary<Button, Coroutine>();
+            SetActiveEvents(
+                () => StartCoroutine(ref CoroutineRoot, OnEnable()),
+                () => StartCoroutine(ref CoroutineRoot, OnDisable()));
         }
 
-        public void SetupPointEvents(ButtonType buttonType, UnityAction pointerEnterAction,
+        public static IEnumerator SetActiveMenu(MenuType menuType)
+        {
+            if (Menu.CurrentMenuType != MenuType.None) Menus[Menu.CurrentMenuType].SetActive(false);
+
+            yield return new WaitUntil(() => Menu.CurrentMenuType == MenuType.None);
+
+            Menus[menuType].SetActive(true);
+        }
+
+        protected void SetupPointEvents(ButtonType buttonType, MenuType menuType)
+        {
+            Button button = Buttons[buttonType];
+            if (ButtonCoroutines.TryGetValue(button, out Coroutine coroutine) == false)
+            {
+                ButtonCoroutines[button] = null;
+            }
+
+            SetupPointEvents(buttonType,
+                () => StartCoroutine(ref coroutine, OnPointerEnter(button)),
+                () => StartCoroutine(ref coroutine, OnPointerExit(button)),
+                () => StartCoroutine(ref CoroutineRoot, SetActiveMenu(menuType)));
+        }
+
+        protected void SetupPointEvents(ButtonType buttonType, UnityAction pointerEnterAction,
             UnityAction pointerExitAction, UnityAction pointerClickAction)
         {
             EventTrigger eventTrigger =
-                LauncherUI.GetOrAddComponent<EventTrigger>(buttons[buttonType].gameObject);
+                LauncherUI.GetOrAddComponent<EventTrigger>(Buttons[buttonType].gameObject);
 
             EventTrigger.Entry entryPointerEnter =
                 new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-            entryPointerEnter.callback.AddListener(delegate
-            {
-                // if (isDisable == false)
-                    pointerEnterAction();
-            });
+            entryPointerEnter.callback.AddListener(delegate { pointerEnterAction(); });
             eventTrigger.triggers.Add(entryPointerEnter);
 
             EventTrigger.Entry entryPointerExit =
                 new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-            entryPointerExit.callback.AddListener(delegate
-            {
-                // if (isDisable == false)
-                    pointerExitAction();
-            });
+            entryPointerExit.callback.AddListener(delegate { pointerExitAction(); });
             eventTrigger.triggers.Add(entryPointerExit);
 
             EventTrigger.Entry entryPointerClick = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
-            entryPointerClick.callback.AddListener(delegate
-            {
-                if (isDisable == false)
-                    pointerClickAction();
-            });
+            entryPointerClick.callback.AddListener(delegate { pointerClickAction(); });
             eventTrigger.triggers.Add(entryPointerClick);
         }
 
-        public void SetActiveEvents(UnityAction enableAction, UnityAction disableAction)
+        private void SetActiveEvents(UnityAction enableAction, UnityAction disableAction)
         {
-            this.onEnableAction = enableAction;
-            this.onDisableAction = disableAction;
+            onEnableAction = enableAction;
+            onDisableAction = disableAction;
         }
 
-        public void SetActive(bool active)
+        protected virtual IEnumerator OnPointerEnter(Button button)
         {
-            if (active == true)
+            yield return null;
+        }
+
+        protected virtual IEnumerator OnPointerExit(Button button)
+        {
+            yield return null;
+        }
+
+        private void SetActive(bool active)
+        {
+            if (active)
             {
-                isDisable = false;
-                root.gameObject.SetActive(true);
                 onEnableAction();
             }
             else
             {
-                isDisable = true;
                 onDisableAction();
             }
         }
 
-        public IEnumerator PlayEnableTitleText()
-        {   
+        protected IEnumerator PlayEnableAnimation(string clipName)
+        {
+            while (animatorRoot.enabled == false || Root.gameObject.activeSelf == false) yield return null;
+
+            animatorRoot.Play(clipName);
+            RuntimeAnimatorController animatorController = animatorRoot.runtimeAnimatorController;
+            AnimationClip animationClip =
+                animatorController.animationClips.First(animationClip => animationClip.name == clipName);
+
+            yield return new WaitForSeconds(animationClip.length);
+        }
+
+        protected void StartCoroutine(ref Coroutine coroutine, IEnumerator routine)
+        {
+            if (coroutine != null)
+            {
+                Mono.StopCoroutine(coroutine);
+                coroutine = null;
+            }
+
+            coroutine = Mono.StartCoroutine(routine);
+        }
+
+        protected void SetupCloseButtonPointEvents(MenuType menuType)
+        {
+            Coroutine coroutineCloseButton = ButtonCoroutines[Buttons[ButtonType.Close]];
+            SetupPointEvents(ButtonType.Close,
+                () => StartCoroutine(ref coroutineCloseButton, OnPointerEnterCloseButton()),
+                () => StartCoroutine(ref coroutineCloseButton, OnPointerExitCloseButton()),
+                () => StartCoroutine(ref CoroutineRoot, SetActiveMenu(menuType)));
+        }
+
+        protected IEnumerator OnPointerEnterCloseButton()
+        {
+            Transform closeIconTransform = Buttons[ButtonType.Close].transform.Find("close button foreground");
+            yield return SpinImage(closeIconTransform, closeIconTransform.rotation.eulerAngles,
+                new Vector3(0, 0, 90.0f));
+        }
+
+        protected IEnumerator OnPointerExitCloseButton()
+        {
+            Transform closeIconTransform = Buttons[ButtonType.Close].transform.Find("close button foreground");
+            yield return SpinImage(closeIconTransform, closeIconTransform.rotation.eulerAngles,
+                Vector3.zero);
+        }
+
+        private IEnumerator SpinImage(Transform targetObjectTransform, Vector3 startAngle, Vector3 targetAngle)
+        {
+            float t = 0;
+            while (t <= 1.0f)
+            {
+                Vector3 current = Vector3.Lerp(startAngle, targetAngle, t);
+                t += Time.deltaTime * 10;
+
+                targetObjectTransform.rotation = Quaternion.Euler(current);
+
+                yield return null;
+            }
+        }
+    }
+
+    public class StartMenu : Menu
+    {
+        private readonly Text textTitle;
+        private readonly Animator animatorTitle;
+
+        internal Coroutine CoroutineTitle;
+        internal Coroutine CoroutineBlurBackground;
+
+        private readonly Image imageBlur;
+
+        private static readonly int Radius = Shader.PropertyToID("_Radius");
+
+        public StartMenu(MonoBehaviour monoBehaviour, Transform transformParent) :
+            base(monoBehaviour, transformParent)
+        {
+            Menus[MenuType.Start] = this;
+
+            Transform parent = Root.parent;
+            Transform titleTransform = parent.Find("Title");
+            textTitle = titleTransform.GetComponent<Text>();
+            animatorTitle = titleTransform.GetComponent<Animator>();
+
+            imageBlur = parent.Find("Blur Panel").GetComponent<Image>();
+
+            materialBlur = imageBlur.material;
+            materialBlur.SetFloat(Radius, 1);
+            imageBlur.gameObject.SetActive(false);
+
+            Buttons = new Dictionary<ButtonType, Button>
+            {
+                [ButtonType.Start] = transformParent.Find("Start").GetComponent<Button>(),
+                [ButtonType.Close] = transformParent.Find("Quit").GetComponent<Button>()
+            };
+
+            ButtonCoroutines = new Dictionary<Button, Coroutine>
+            {
+                { Buttons[ButtonType.Start], default(Coroutine) },
+                { Buttons[ButtonType.Close], default(Coroutine) }
+            };
+
+            SetupPointEvents(ButtonType.Start, MenuType.SignIn);
+
+            Button buttonClose = Buttons[ButtonType.Close];
+            Coroutine coroutineCloseButton = ButtonCoroutines[buttonClose];
+            SetupPointEvents(ButtonType.Close,
+                () => StartCoroutine(ref coroutineCloseButton, OnPointerEnter(buttonClose)),
+                () => StartCoroutine(ref coroutineCloseButton, OnPointerExit(buttonClose)),
+                () =>
+                {
+#if UNITY_EDITOR
+                    UnityEditor.EditorApplication.isPlaying = false;
+#else
+                    Application.Quit();
+#endif
+                });
+        }
+
+        private readonly Material materialBlur;
+
+        private IEnumerator PlayEnableTitleText()
+        {
             textTitle.gameObject.SetActive(true);
             yield return PlayTextAnimation("Title_OnEnable");
         }
 
-        public IEnumerator PlayDisableTitleText()
+        internal IEnumerator PlayDisableTitleText()
         {
             yield return PlayTextAnimation("Title_OnDisable");
             textTitle.gameObject.SetActive(false);
@@ -144,640 +270,328 @@ namespace OSS.Launcher.UI
         private IEnumerator PlayTextAnimation(string clipName)
         {
             while (animatorTitle.enabled == false || animatorTitle.gameObject.activeSelf == false) yield return null;
-            
+
             animatorTitle.Play(clipName);
             RuntimeAnimatorController animController = animatorTitle.runtimeAnimatorController;
             AnimationClip clip = animController.animationClips.First(animationClip => animationClip.name == clipName);
 
             yield return new WaitForSeconds(clip.length);
-
-
-            coroutineTitle = null;
         }
 
-        public IEnumerator PlayEnableAnimation()
+        private IEnumerator BlurBackground()
         {
-            yield return PlayButtonAnimation("OnEnable_StartMenuButtons");
-        }
-
-        public IEnumerator PlayDisableAnimation()
-        {
-            yield return PlayButtonAnimation("OnDisable_StartMenuButtons");
-        }
-
-        private IEnumerator PlayButtonAnimation(string clipName)
-        {
-            while (animatorButtons.enabled == false || root.gameObject.activeSelf == false) yield return null;
-            
-            animatorButtons.Play(clipName);
-            RuntimeAnimatorController animatorController = animatorButtons.runtimeAnimatorController;
-            AnimationClip animationClip =
-                animatorController.animationClips.First(animationClip => animationClip.name == clipName);
-
-            yield return new WaitForSeconds(animationClip.length);
-
-            coroutineButtons = null;
-        }
-        
-        public IEnumerator BlurBackground()
-        {
-            Material material = blurImage.material;
-            
             const float maxValue = 4.0f;
-            float currentValue = material.GetFloat("_Radius");
+            float currentValue = materialBlur.GetFloat(Radius);
 
-            yield return BackgroundBlurred(currentValue, maxValue);
+            yield return BackgroundBlur(currentValue, maxValue);
         }
 
-        public IEnumerator ClearBackground()
+        public IEnumerator ClearBackgroundBlur()
         {
-            Material material = blurImage.material;
-            
             const float maxValue = 1.0f;
-            float currentValue = material.GetFloat("_Radius");
+            float currentValue = materialBlur.GetFloat(Radius);
 
-            yield return BackgroundBlurred(currentValue, maxValue);
-            
-            blurImage.gameObject.SetActive(false);
+            yield return BackgroundBlur(currentValue, maxValue);
+
+            imageBlur.gameObject.SetActive(false);
         }
 
-        private IEnumerator BackgroundBlurred(float current, float max)
+        private IEnumerator BackgroundBlur(float current, float max)
         {
-            blurImage.gameObject.SetActive(true);
-            Material material = blurImage.material;
-            
+            imageBlur.gameObject.SetActive(true);
+            Material material = imageBlur.material;
+
             float t = 0;
             while (t <= 1.0f)
             {
                 float radius = Mathf.Lerp(current, max, t);
-                material.SetFloat("_Radius", radius);
+                material.SetFloat(Radius, radius);
 
                 t += Time.deltaTime * 10;
 
                 yield return null;
             }
         }
-    }
 
-    public class SignIn
-    {
-        public enum ButtonType
+        protected override IEnumerator OnPointerEnter(Button button)
         {
-            Close,
-            SignUp,
-            SignIn
+            ButtonCoroutines.TryGetValue(button, out Coroutine coroutine);
+
+            GameObject buttonGameObject = button.gameObject;
+            Vector3 startScale = buttonGameObject.transform.localScale;
+            Vector3 targetScale = new Vector3(1.2f, 1.2f, 1.2f);
+
+            StartCoroutine(ref coroutine, ChangeGameObjectScale(buttonGameObject, startScale, targetScale));
+
+            yield return coroutine;
         }
 
-        public Transform root { get; private set; }
-
-        private Dictionary<ButtonType, Button> buttons { get; set; }
-
-        public Coroutine coroutineButtons;
-
-        public Coroutine closeButtonCoroutine;
-
-        public Animator animator { get; private set; }
-        
-        private bool isDisable = false;
-        private UnityAction onEnableAction;
-        private UnityAction onDisableAction;
-
-        public SignIn(Transform parent)
+        protected override IEnumerator OnPointerExit(Button button)
         {
-            root = parent;
-            animator = root.GetComponent<Animator>();
+            ButtonCoroutines.TryGetValue(button, out Coroutine coroutine);
 
-            buttons = new Dictionary<ButtonType, Button>
-            {
-                [ButtonType.Close] = root.Find("Close").GetComponent<Button>(),
-                [ButtonType.SignIn] = root.Find("Buttons/Sign In").GetComponent<Button>(),
-                [ButtonType.SignUp] = root.Find("Buttons/Sign Up").GetComponent<Button>()
-            };
+            GameObject buttonGameObject = button.gameObject;
+            Vector3 startScale = buttonGameObject.transform.localScale;
+            Vector3 targetScale = Vector3.one;
+
+            StartCoroutine(ref coroutine, ChangeGameObjectScale(buttonGameObject, startScale, targetScale));
+
+            yield return coroutine;
         }
 
-        public void SetActive(bool active)
+        protected override IEnumerator OnEnable()
         {
-            if (active)
-            {
-                isDisable = false;
-                root.gameObject.SetActive(active);
-                onEnableAction();
-            }
-            else
-            {
-                isDisable = true;
-                onDisableAction();
-            }
+            Root.gameObject.SetActive(true);
+
+            StartCoroutine(ref CoroutineRoot, PlayEnableAnimation("OnEnable_StartMenuButtons"));
+
+            StartCoroutine(ref CoroutineTitle, PlayEnableTitleText());
+
+            StartCoroutine(ref CoroutineBlurBackground, ClearBackgroundBlur());
+
+            yield return CoroutineRoot;
+            yield return CoroutineTitle;
+            yield return CoroutineBlurBackground;
+
+            Menu.CurrentMenuType = MenuType.Start;
         }
 
-        public void SetActiveEvents(UnityAction enableAction, UnityAction disableAction)
+        protected override IEnumerator OnDisable(bool all = false)
         {
-            this.onEnableAction = enableAction;
-            this.onDisableAction = disableAction;
-        }
-        
-        public void SetupPointEvents(ButtonType buttonType, UnityAction pointerEnterAction,
-            UnityAction pointerExitAction, UnityAction pointerClickAction)
-        {
-            EventTrigger eventTrigger =
-                LauncherUI.GetOrAddComponent<EventTrigger>(buttons[buttonType].gameObject);
+            StartCoroutine(ref CoroutineBlurBackground, BlurBackground());
 
-            EventTrigger.Entry entryPointerEnter =
-                new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-            entryPointerEnter.callback.AddListener(delegate
-            {
-                if (isDisable == false)
-                    pointerEnterAction();
-            });
-            eventTrigger.triggers.Add(entryPointerEnter);
+            StartCoroutine(ref CoroutineRoot, PlayEnableAnimation("OnDisable_StartMenuButtons"));
 
-            EventTrigger.Entry entryPointerExit =
-                new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-            entryPointerExit.callback.AddListener(delegate
-            {
-                if (isDisable == false)
-                    pointerExitAction();
-            });
-            eventTrigger.triggers.Add(entryPointerExit);
 
-            EventTrigger.Entry entryPointerClick = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
-            entryPointerClick.callback.AddListener(delegate
-            {
-                if (isDisable == false)
-                    pointerClickAction();
-            });
-            eventTrigger.triggers.Add(entryPointerClick);
-        }
-        
-        public IEnumerator PlayEnableAnimation()
-        {
-            yield return PlayButtonAnimation("OnEnable_SignIn");
+            yield return CoroutineRoot;
+            yield return CoroutineBlurBackground;
+
+            Menu.CurrentMenuType = MenuType.None;
+
+            Root.gameObject.SetActive(false);
         }
 
-        public IEnumerator PlayDisableAnimation()
+        private IEnumerator ChangeGameObjectScale(GameObject targetGameObject, Vector3 startScale, Vector3 targetScale)
         {
-            yield return PlayButtonAnimation("OnDisable_SignIn");
-        }
+            Vector3 currentScale = startScale;
 
-        private IEnumerator PlayButtonAnimation(string clipName)
-        {
-            while (animator.enabled == false || root.gameObject.activeSelf == false) yield return null;
-            
-            animator.Play(clipName);
-            RuntimeAnimatorController animatorController = animator.runtimeAnimatorController;
-            AnimationClip animationClip =
-                animatorController.animationClips.First(animationClip => animationClip.name == clipName);
-
-            yield return new WaitForSeconds(animationClip.length);
-
-            coroutineButtons = null;
-        }
-
-        public IEnumerator PointerEnterCloseButton()
-        {
-            Transform closeIconTransform = buttons[ButtonType.Close].transform.Find("close button foreground");
-            yield return SpinImage(closeIconTransform, closeIconTransform.rotation.eulerAngles,
-                new Vector3(0, 0, 90.0f));
-        }
-
-        public IEnumerator PointerExitCloseButton()
-        {
-            Transform closeIconTransform = buttons[ButtonType.Close].transform.Find("close button foreground");
-            yield return SpinImage(closeIconTransform, closeIconTransform.rotation.eulerAngles,
-                Vector3.zero);
-        }
-
-        private IEnumerator SpinImage(Transform targetObjectTransform, Vector3 startAngle, Vector3 targetAngle)
-        {
             float t = 0;
             while (t <= 1.0f)
             {
-                Vector3 current = Vector3.Lerp(startAngle, targetAngle, t);
+                float scale = Mathf.Lerp(startScale.x, targetScale.x, t);
                 t += Time.deltaTime * 10;
 
-                targetObjectTransform.rotation= Quaternion.Euler(current);
-                
+                currentScale.x = currentScale.y = currentScale.y = scale;
+
+                targetGameObject.transform.localScale = currentScale;
+
                 yield return null;
             }
+
+            targetGameObject.transform.localScale = targetScale;
         }
     }
 
-    public class SignUp
+    public class SignIn : Menu
     {
-        public enum ButtonType
+        public SignIn(MonoBehaviour monoBehaviour, Transform parent) :
+            base(monoBehaviour, parent)
         {
-            Close,
-            SignUp,
-            Check
-        }
+            Menus[MenuType.SignIn] = this;
 
-        public Transform root { get; private set; }
-
-        private Dictionary<ButtonType, Button> buttons { get; set; }
-
-        public Coroutine coroutineButtons;
-
-        public Coroutine closeButtonCoroutine;
-
-        public Animator animator { get; private set; }
-        
-        private bool isDisable = false;
-        private UnityAction onEnableAction;
-        private UnityAction onDisableAction;
-
-        public SignUp(Transform parent)
-        {
-            root = parent;
-            animator = root.GetComponent<Animator>();
-            
-            buttons = new Dictionary<ButtonType, Button>
+            Buttons = new Dictionary<ButtonType, Button>
             {
-                [ButtonType.Close] = root.Find("Close").GetComponent<Button>(),
-                [ButtonType.SignUp] = root.Find("Sign Up").GetComponent<Button>()
+                [ButtonType.Close] = Root.Find("Close").GetComponent<Button>(),
+                [ButtonType.SignIn] = Root.Find("Buttons/Sign In").GetComponent<Button>(),
+                [ButtonType.SignUp] = Root.Find("Buttons/Sign Up").GetComponent<Button>()
             };
-        }
-        
-        public void SetupPointEvents(ButtonType buttonType, UnityAction pointerEnterAction,
-            UnityAction pointerExitAction, UnityAction pointerClickAction)
-        {
-            EventTrigger eventTrigger =
-                LauncherUI.GetOrAddComponent<EventTrigger>(buttons[buttonType].gameObject);
 
-            EventTrigger.Entry entryPointerEnter =
-                new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-            entryPointerEnter.callback.AddListener(delegate
+            ButtonCoroutines = new Dictionary<Button, Coroutine>
             {
-                pointerEnterAction();
-            });
-            eventTrigger.triggers.Add(entryPointerEnter);
-
-            EventTrigger.Entry entryPointerExit =
-                new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-            entryPointerExit.callback.AddListener(delegate
-            {
-                pointerExitAction();
-            });
-            eventTrigger.triggers.Add(entryPointerExit);
-
-            EventTrigger.Entry entryPointerClick = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
-            entryPointerClick.callback.AddListener(delegate
-            {
-                if (isDisable == false)
-                    pointerClickAction();
-            });
-            eventTrigger.triggers.Add(entryPointerClick);
-        }
-
-        public void SetActiveEvents(UnityAction enableAction, UnityAction disableAction)
-        {
-            this.onEnableAction = enableAction;
-            this.onDisableAction = disableAction;
-        }
-        
-        public void SetActive(bool active)
-        {
-            if (active)
-            {
-                isDisable = false;
-                root.gameObject.SetActive(active);
-                onEnableAction();
-            }
-            else
-            {
-                isDisable = true;
-                onDisableAction();
-            }
-        }
-        
-        public IEnumerator PlayEnableAnimation()
-        {
-            yield return PlayButtonAnimation("OnEnable_SignUp");
-        }
-
-        public IEnumerator PlayDisableAnimation()
-        {
-            yield return PlayButtonAnimation("OnDisable_SignUp");
-        }
-
-        private IEnumerator PlayButtonAnimation(string clipName)
-        {
-            while (animator.enabled == false || root.gameObject.activeSelf == false) yield return null;
-            
-            animator.Play(clipName);
-            RuntimeAnimatorController animatorController = animator.runtimeAnimatorController;
-            AnimationClip animationClip =
-                animatorController.animationClips.First(animationClip => animationClip.name == clipName);
-
-            yield return new WaitForSeconds(animationClip.length);
-
-            coroutineButtons = null;
-        }
-        
-        public IEnumerator PointerEnterCloseButton()
-        {
-            Transform closeIconTransform = buttons[ButtonType.Close].transform.Find("close button foreground");
-            yield return SpinImage(closeIconTransform, closeIconTransform.rotation.eulerAngles,
-                new Vector3(0, 0, 90.0f));
-        }
-
-        public IEnumerator PointerExitCloseButton()
-        {
-            Transform closeIconTransform = buttons[ButtonType.Close].transform.Find("close button foreground");
-            yield return SpinImage(closeIconTransform, closeIconTransform.rotation.eulerAngles,
-                Vector3.zero);
-        }
-
-        private IEnumerator SpinImage(Transform targetObjectTransform, Vector3 startAngle, Vector3 targetAngle)
-        {
-            float t = 0;
-            while (t <= 1.0f)
-            {
-                Vector3 current = Vector3.Lerp(startAngle, targetAngle, t);
-                t += Time.deltaTime * 10;
-
-                targetObjectTransform.rotation= Quaternion.Euler(current);
-                
-                yield return null;
-            }
-        }
-    }
-    
-
-    public class RoomList
-    {
-        public enum ButtonType
-        {
-            Close,
-            CreateRoom
-        }
-
-        public Transform root { get; private set; }
-
-        private Dictionary<ButtonType, Button> buttons { get; set; }
-
-        public Coroutine coroutineButtons;
-
-        public Coroutine closeButtonCoroutine;
-
-        public Animator animator { get; private set; }
-        
-        private bool isDisable = false;
-        private UnityAction onEnableAction;
-        private UnityAction onDisableAction;
-
-        public RoomList(Transform root)
-        {
-            this.root = root;
-            animator = root.GetComponent<Animator>();
-            
-            buttons = new Dictionary<ButtonType, Button>
-            {
-                [ButtonType.Close] = root.Find("Close").GetComponent<Button>(),
-                [ButtonType.CreateRoom] = root.Find("ListView/Room List/Button CreateRoom").GetComponent<Button>()
+                { Buttons[ButtonType.Close], default(Coroutine) },
+                { Buttons[ButtonType.SignIn], default(Coroutine) },
+                { Buttons[ButtonType.SignUp], default(Coroutine) }
             };
-        }
-        
-        public void SetupPointEvents(ButtonType buttonType, UnityAction pointerEnterAction,
-            UnityAction pointerExitAction, UnityAction pointerClickAction)
-        {
-            EventTrigger eventTrigger =
-                LauncherUI.GetOrAddComponent<EventTrigger>(buttons[buttonType].gameObject);
 
-            EventTrigger.Entry entryPointerEnter =
-                new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-            entryPointerEnter.callback.AddListener(delegate
-            {
-                pointerEnterAction();
-            });
-            eventTrigger.triggers.Add(entryPointerEnter);
-
-            EventTrigger.Entry entryPointerExit =
-                new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-            entryPointerExit.callback.AddListener(delegate
-            {
-                pointerExitAction();
-            });
-            eventTrigger.triggers.Add(entryPointerExit);
-
-            EventTrigger.Entry entryPointerClick = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
-            entryPointerClick.callback.AddListener(delegate
-            {
-                if (isDisable == false)
-                    pointerClickAction();
-            });
-            eventTrigger.triggers.Add(entryPointerClick);
+            SetupCloseButtonPointEvents(MenuType.Start);
+            SetupPointEvents(ButtonType.SignUp, MenuType.SignUp);
+            SetupPointEvents(ButtonType.SignIn, MenuType.RoomList); // TODO (OSS) : check success login
         }
 
-        public void SetActiveEvents(UnityAction enableAction, UnityAction disableAction)
+        protected override IEnumerator OnEnable()
         {
-            this.onEnableAction = enableAction;
-            this.onDisableAction = disableAction;
+            Root.gameObject.SetActive(true);
+
+            StartCoroutine(ref CoroutineRoot, PlayEnableAnimation("OnEnable_SignIn"));
+
+            yield return CoroutineRoot;
+
+            Menu.CurrentMenuType = MenuType.SignIn;
         }
 
-        public void SetActive(bool active)
+        protected override IEnumerator OnDisable(bool all = false)
         {
-            if (active)
-            {
-                isDisable = false;
-                root.gameObject.SetActive(active);
-                onEnableAction();
-            }
-            else
-            {
-                isDisable = true;
-                onDisableAction();
-            }
-        }
-        
-        public IEnumerator PlayEnableAnimation()
-        {
-            yield return PlayButtonAnimation("OnEnable_RoomListAnimation");
-        }
+            StartCoroutine(ref CoroutineRoot, PlayEnableAnimation("OnDisable_SignIn"));
 
-        public IEnumerator PlayDisableAnimation()
-        {
-            yield return PlayButtonAnimation("OnDisable_RoomListAnimation");
-        }
+            yield return CoroutineRoot;
 
-        private IEnumerator PlayButtonAnimation(string clipName)
-        {
-            while (animator.enabled == false || root.gameObject.activeSelf == false) yield return null;
-            
-            animator.Play(clipName);
-            RuntimeAnimatorController animatorController = animator.runtimeAnimatorController;
-            AnimationClip animationClip =
-                animatorController.animationClips.First(animationClip => animationClip.name == clipName);
+            Root.gameObject.SetActive(false);
 
-            yield return new WaitForSeconds(animationClip.length);
-
-            coroutineButtons = null;
-        }
-        
-        public IEnumerator PointerEnterCloseButton()
-        {
-            Transform closeIconTransform = buttons[ButtonType.Close].transform.Find("close button foreground");
-            yield return SpinImage(closeIconTransform, closeIconTransform.rotation.eulerAngles,
-                new Vector3(0, 0, 90.0f));
-        }
-
-        public IEnumerator PointerExitCloseButton()
-        {
-            Transform closeIconTransform = buttons[ButtonType.Close].transform.Find("close button foreground");
-            yield return SpinImage(closeIconTransform, closeIconTransform.rotation.eulerAngles,
-                Vector3.zero);
-        }
-
-        private IEnumerator SpinImage(Transform targetObjectTransform, Vector3 startAngle, Vector3 targetAngle)
-        {
-            float t = 0;
-            while (t <= 1.0f)
-            {
-                Vector3 current = Vector3.Lerp(startAngle, targetAngle, t);
-                t += Time.deltaTime * 10;
-
-                targetObjectTransform.rotation= Quaternion.Euler(current);
-                
-                yield return null;
-            }
+            Menu.CurrentMenuType = MenuType.None;
         }
     }
 
-    public class CreateRoom
+    public class SignUp : Menu
     {
-        public enum ButtonType
+        public SignUp(MonoBehaviour monoBehaviour, Transform transformParent) :
+            base(monoBehaviour, transformParent)
         {
-            Close,
-            CreateRoom
-        }
+            Menus[MenuType.SignUp] = this;
 
-        public Transform root { get; private set; }
-
-        private Dictionary<ButtonType, Button> buttons { get; set; }
-
-        public Coroutine coroutineButtons;
-
-        public Coroutine closeButtonCoroutine;
-
-        public Animator animator { get; private set; }
-        
-        private bool isDisable = false;
-        private UnityAction onEnableAction;
-        private UnityAction onDisableAction;
-
-        public CreateRoom(Transform parent)
-        {
-            this.root = parent;
-            animator = root.GetComponent<Animator>();
-            
-            buttons = new Dictionary<ButtonType, Button>
+            Buttons = new Dictionary<ButtonType, Button>
             {
-                [ButtonType.Close] = root.Find("Header/Close").GetComponent<Button>(),
-                [ButtonType.CreateRoom] = root.Find("Create").GetComponent<Button>()
+                [ButtonType.Close] = Root.Find("Close").GetComponent<Button>(),
+                [ButtonType.SignUp] = Root.Find("Sign Up").GetComponent<Button>()
             };
-        }
-        
-         public void SetupPointEvents(ButtonType buttonType, UnityAction pointerEnterAction,
-            UnityAction pointerExitAction, UnityAction pointerClickAction)
-        {
-            EventTrigger eventTrigger =
-                LauncherUI.GetOrAddComponent<EventTrigger>(buttons[buttonType].gameObject);
 
-            EventTrigger.Entry entryPointerEnter =
-                new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-            entryPointerEnter.callback.AddListener(delegate
+            ButtonCoroutines = new Dictionary<Button, Coroutine>
             {
-                pointerEnterAction();
-            });
-            eventTrigger.triggers.Add(entryPointerEnter);
+                { Buttons[ButtonType.Close], default(Coroutine) },
+                { Buttons[ButtonType.SignUp], default(Coroutine) }
+            };
 
-            EventTrigger.Entry entryPointerExit =
-                new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-            entryPointerExit.callback.AddListener(delegate
-            {
-                pointerExitAction();
-            });
-            eventTrigger.triggers.Add(entryPointerExit);
-
-            EventTrigger.Entry entryPointerClick = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
-            entryPointerClick.callback.AddListener(delegate
-            {
-                if (isDisable == false)
-                    pointerClickAction();
-            });
-            eventTrigger.triggers.Add(entryPointerClick);
+            SetupCloseButtonPointEvents(MenuType.SignIn);
+            // TODO (OSS) : Set ID check button events 
         }
 
-        public void SetActiveEvents(UnityAction enableAction, UnityAction disableAction)
+        protected override IEnumerator OnEnable()
         {
-            this.onEnableAction = enableAction;
-            this.onDisableAction = disableAction;
+            Root.gameObject.SetActive(true);
+
+            StartCoroutine(ref CoroutineRoot, PlayEnableAnimation("OnEnable_SignUp"));
+
+            yield return CoroutineRoot;
+
+            Menu.CurrentMenuType = MenuType.SignUp;
         }
 
-        public void SetActive(bool active)
+        protected override IEnumerator OnDisable(bool all = false)
         {
-            if (active)
+            StartCoroutine(ref CoroutineRoot, PlayEnableAnimation("OnDisable_SignUp"));
+
+            yield return CoroutineRoot;
+
+            Menu.CurrentMenuType = MenuType.None;
+
+            Root.gameObject.SetActive(false);
+        }
+    }
+
+
+    public class RoomList : Menu
+    {
+        public RoomList(MonoBehaviour monoBehaviour, Transform transformParent) :
+            base(monoBehaviour, transformParent)
+        {
+            Menus[MenuType.RoomList] = this;
+
+            Buttons = new Dictionary<ButtonType, Button>
             {
-                isDisable = false;
-                root.gameObject.SetActive(active);
-                onEnableAction();
+                [ButtonType.Close] = Root.Find("Close").GetComponent<Button>(),
+                [ButtonType.CreateRoom] = Root.Find("ListView/Room List/Button CreateRoom").GetComponent<Button>()
+            };
+
+            ButtonCoroutines = new Dictionary<Button, Coroutine>
+            {
+                { Buttons[ButtonType.Close], default(Coroutine) },
+                { Buttons[ButtonType.CreateRoom], default(Coroutine) }
+            };
+
+            SetupCloseButtonPointEvents(MenuType.SignIn);
+            SetupPointEvents(ButtonType.CreateRoom, MenuType.CreateRoom);
+        }
+
+        protected override IEnumerator OnEnable()
+        {
+            Root.gameObject.SetActive(true);
+
+            StartCoroutine(ref CoroutineRoot, PlayEnableAnimation("OnEnable_RoomListAnimation"));
+            yield return CoroutineRoot;
+
+            Menu.CurrentMenuType = MenuType.RoomList;
+        }
+
+        protected override IEnumerator OnDisable(bool all = false)
+        {
+            StartCoroutine(ref CoroutineRoot, PlayEnableAnimation("OnDisable_RoomListAnimation"));
+            yield return CoroutineRoot;
+
+            Root.gameObject.SetActive(false);
+
+            Menu.CurrentMenuType = MenuType.None;
+        }
+    }
+
+    public class CreateRoom : Menu
+    {
+        public CreateRoom(MonoBehaviour monoBehaviour, Transform transformParent) :
+            base(monoBehaviour, transformParent)
+        {
+            Menus[MenuType.CreateRoom] = this;
+
+            Buttons = new Dictionary<ButtonType, Button>
+            {
+                [ButtonType.Close] = Root.Find("Header/Close").GetComponent<Button>(),
+                [ButtonType.CreateRoom] = Root.Find("Create").GetComponent<Button>()
+            };
+
+            ButtonCoroutines = new Dictionary<Button, Coroutine>
+            {
+                { Buttons[ButtonType.Close], default(Coroutine) },
+                { Buttons[ButtonType.CreateRoom], default(Coroutine) }
+            };
+
+            SetupCloseButtonPointEvents(MenuType.RoomList);
+
+            SetupPointEvents(ButtonType.CreateRoom,
+                () => { },
+                () => { },
+                () => StartCoroutine(ref CoroutineRoot, OnDisable(true)));
+        }
+
+        protected override IEnumerator OnEnable()
+        {
+            Root.gameObject.SetActive(true);
+
+            StartCoroutine(ref CoroutineRoot, PlayEnableAnimation("OnEnable_CreateRoom"));
+            yield return CoroutineRoot;
+
+            Menu.CurrentMenuType = MenuType.CreateRoom;
+        }
+
+        protected override IEnumerator OnDisable(bool all)
+        {
+            StartMenu startMenu = (StartMenu)Menus[MenuType.Start];
+
+            StartCoroutine(ref CoroutineRoot, PlayEnableAnimation("OnDisable_CreateRoom"));
+
+            if (all)
+            {
+                StartCoroutine(ref startMenu.CoroutineTitle, startMenu.PlayDisableTitleText());
+                StartCoroutine(ref startMenu.CoroutineBlurBackground, startMenu.ClearBackgroundBlur());
             }
-            else
+
+            yield return CoroutineRoot;
+
+            if (all)
             {
-                isDisable = true;
-                onDisableAction();
+                yield return startMenu.CoroutineTitle;
+                yield return startMenu.CoroutineBlurBackground;
             }
-        }
-        
-        public IEnumerator PlayEnableAnimation()
-        {
-            yield return PlayButtonAnimation("OnEnable_CreateRoom");
-        }
 
-        public IEnumerator PlayDisableAnimation()
-        {
-            yield return PlayButtonAnimation("OnDisable_CreateRoom");
-        }
+            Root.gameObject.SetActive(false);
 
-        private IEnumerator PlayButtonAnimation(string clipName)
-        {
-            while (animator.enabled == false || root.gameObject.activeSelf == false) yield return null;
-            
-            animator.Play(clipName);
-            RuntimeAnimatorController animatorController = animator.runtimeAnimatorController;
-            AnimationClip animationClip =
-                animatorController.animationClips.First(animationClip => animationClip.name == clipName);
-
-            yield return new WaitForSeconds(animationClip.length);
-
-            coroutineButtons = null;
-        }
-        
-        public IEnumerator PointerEnterCloseButton()
-        {
-            Transform closeIconTransform = buttons[ButtonType.Close].transform.Find("close button foreground");
-            yield return SpinImage(closeIconTransform, closeIconTransform.rotation.eulerAngles,
-                new Vector3(0, 0, 90.0f));
-        }
-
-        public IEnumerator PointerExitCloseButton()
-        {
-            Transform closeIconTransform = buttons[ButtonType.Close].transform.Find("close button foreground");
-            yield return SpinImage(closeIconTransform, closeIconTransform.rotation.eulerAngles,
-                Vector3.zero);
-        }
-
-        private IEnumerator SpinImage(Transform targetObjectTransform, Vector3 startAngle, Vector3 targetAngle)
-        {
-            float t = 0;
-            while (t <= 1.0f)
-            {
-                Vector3 current = Vector3.Lerp(startAngle, targetAngle, t);
-                t += Time.deltaTime * 10;
-
-                targetObjectTransform.rotation= Quaternion.Euler(current);
-                
-                yield return null;
-            }
+            Menu.CurrentMenuType = MenuType.None;
         }
     }
 }
