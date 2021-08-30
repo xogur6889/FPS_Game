@@ -48,10 +48,14 @@ namespace OSS.Launcher.UI
         protected abstract IEnumerator OnEnable();
         protected abstract IEnumerator OnDisable(bool all = false);
 
+        protected Server server;
+
         protected Menu(MonoBehaviour monoBehaviour, Transform root)
         {
             this.Mono = monoBehaviour;
             this.Root = root;
+
+            server = monoBehaviour.GetComponent<Server>();
 
             Menu.CurrentMenuType = MenuType.None;
 
@@ -394,6 +398,9 @@ namespace OSS.Launcher.UI
 
     public class SignIn : Menu
     {
+        private InputField id;
+        private InputField password;
+
         public SignIn(MonoBehaviour monoBehaviour, Transform parent) :
             base(monoBehaviour, parent)
         {
@@ -406,6 +413,9 @@ namespace OSS.Launcher.UI
                 [ButtonType.SignUp] = Root.Find("Buttons/Sign Up").GetComponent<Button>()
             };
 
+            id = Root.Find("Field/ID/InputField").GetComponent<InputField>();
+            password = Root.Find("Field/PW/InputField").GetComponent<InputField>();
+
             ButtonCoroutines = new Dictionary<Button, Coroutine>
             {
                 { Buttons[ButtonType.Close], default(Coroutine) },
@@ -416,6 +426,18 @@ namespace OSS.Launcher.UI
             SetupCloseButtonPointEvents(MenuType.Start);
             SetupPointEvents(ButtonType.SignUp, MenuType.SignUp);
             SetupPointEvents(ButtonType.SignIn, MenuType.RoomList); // TODO (OSS) : check success login
+            SetupPointEvents(ButtonType.SignIn,
+                                () => { },
+                                () => { },
+                                () =>
+                                {
+                                    if (string.IsNullOrWhiteSpace(id.text) == true || string.IsNullOrWhiteSpace(password.text) == true) return;
+
+                                    if (server.SignIn(id.text, password.text) == false) return;
+
+                                    StartCoroutine(ref CoroutineRoot, SetActiveMenu(MenuType.RoomList));
+                                });
+
         }
 
         protected override IEnumerator OnEnable()
@@ -443,6 +465,10 @@ namespace OSS.Launcher.UI
 
     public class SignUp : Menu
     {
+        private InputField id;
+        private InputField password;
+        private InputField passwordCheck;
+
         public SignUp(MonoBehaviour monoBehaviour, Transform transformParent) :
             base(monoBehaviour, transformParent)
         {
@@ -454,6 +480,10 @@ namespace OSS.Launcher.UI
                 [ButtonType.SignUp] = Root.Find("Sign Up").GetComponent<Button>()
             };
 
+            id = Root.Find("Field/ID/InputField").GetComponent<InputField>();
+            password = Root.Find("Field/PW/InputField").GetComponent<InputField>();
+            passwordCheck = Root.Find("Field/PW check/InputField").GetComponent<InputField>();
+
             ButtonCoroutines = new Dictionary<Button, Coroutine>
             {
                 { Buttons[ButtonType.Close], default(Coroutine) },
@@ -462,6 +492,15 @@ namespace OSS.Launcher.UI
 
             SetupCloseButtonPointEvents(MenuType.SignIn);
             // TODO (OSS) : Set ID check button events 
+            SetupPointEvents(ButtonType.SignUp,
+                () => { },
+                () => { },
+                () =>
+                {
+                    if (string.IsNullOrWhiteSpace(id.text) == true || password.text.CompareTo(passwordCheck.text) != 0) return;
+
+                    server.SignUp(id.text, password.text);
+                });
         }
 
         protected override IEnumerator OnEnable()

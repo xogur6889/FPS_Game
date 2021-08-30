@@ -16,7 +16,7 @@ MonoBehaviour:
   signatureKey: 1f087141-00cf-11ec-b9fc-c9829b6535412458
   functionAuthKey: 
   packageName: com.Unity.com.unity.template.fps
-  isAllPlatform: 0
+  isAllPlatform: 1
   sendLogReport: 1
   timeOutSec: 100
   Version: 5.4.5
